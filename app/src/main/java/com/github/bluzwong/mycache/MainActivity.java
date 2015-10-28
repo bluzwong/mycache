@@ -5,11 +5,18 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import com.github.bluzwong.mycache_lib.Cache;
+import com.github.bluzwong.mycache_lib.CacheHelper;
+import com.github.bluzwong.mycache_lib.CacheUtil;
 import com.github.bluzwong.mycache_lib.Ignore;
+import rx.Observable;
+import rx.functions.Action1;
+import rx.functions.Func1;
+import rx.schedulers.Schedulers;
 
 import java.util.List;
 
@@ -22,19 +29,48 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        CacheUtil.setApplicationContext(this);
+        CacheUtil.setNeedLog(true);
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
+                testFuncCached(1, true, null)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(Schedulers.newThread())
+                        .subscribe(new Action1<Integer>() {
+                            @Override
+                            public void call(Integer integer) {
+                                Log.i("cache", "integer = " + integer);
+                            }
+                        });
             }
         });
     }
 
     @Cache(time = true)
-    public static final int testFunc(@Ignore int a, boolean b, List c) {
-        return 0;
+    public static Observable<Integer> testFunc(@Ignore int a, boolean b, List c) {
+        return Observable.just(null)
+                .map(new Func1<Object, Integer>() {
+                    @Override
+                    public Integer call(Object o) {
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        return 123;
+                    }
+                });
+    }
+
+    public static Observable<Integer> testFuncCached(int a, boolean b, List c) {
+        return (Observable<Integer>)
+                CacheHelper.getCachedMethod(testFunc(a, b, c),
+                        "public.static.testFuncCached@Int.a.boolean.b.List.c",
+                        true, 5000L,true, 10000L);
     }
 
     @Override

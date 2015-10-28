@@ -1,5 +1,6 @@
 package com.github.bluzwong.mycache_lib;
 
+import android.content.Context;
 import android.util.Log;
 import io.paperdb.Paper;
 import io.realm.Realm;
@@ -27,7 +28,7 @@ public class CacheHelper {
     private static final Map<String, Block> blocks = new HashMap<String, Block>();
 
 
-    public static Observable<Object> getCachedMethod(final Observable<Object> originObservable, String methodSignature,
+    public static Observable getCachedMethod(final Observable originObservable, String methodSignature,
                                                      final boolean needMemoryCache, final long memTime,
                                                      boolean needDiskCache, final long diskTime)
     {
@@ -65,11 +66,17 @@ public class CacheHelper {
                     @Override
                     public Object call(Object o) {
                         final long now = System.currentTimeMillis();
-                        final Realm realm = Realm.getInstance(CacheUtil.getApplicationContext());
-                        CacheInfo cacheInfo = realm.where(CacheInfo.class)
-                                .equalTo("key", key)
-                                .greaterThan("expTime", now)
-                                .findFirst();
+                        Realm realm = null;
+                        if (CacheUtil.getApplicationContext() != null) {
+                            realm = Realm.getInstance(CacheUtil.getApplicationContext());
+                        }
+                        CacheInfo cacheInfo = null;
+                        if (realm != null) {
+                            cacheInfo = realm.where(CacheInfo.class)
+                                    .equalTo("key", key)
+                                    .greaterThan("expTime", now)
+                                    .findFirst();
+                        }
                         if (finalNeedDiskCache) {
                             if (cacheInfo != null && Paper.exist(cacheInfo.getObjGuid())) {
                                 Object objFromDb = Paper.get(cacheInfo.getObjGuid());
@@ -106,11 +113,14 @@ public class CacheHelper {
                                 }
                                 //Log.d(cachedValueAfterBlock + "", " after newRequestStarted return cached key:" + key + " value" + cachedValueAfterBlock);
                             }
-                            realm.refresh();
-                            cacheInfo = realm.where(CacheInfo.class)
-                                    .equalTo("key", key)
-                                    .greaterThan("expTime", now)
-                                    .findFirst();
+                            if (realm != null) {
+                                realm.refresh();
+                                cacheInfo = realm.where(CacheInfo.class)
+                                        .equalTo("key", key)
+                                        .greaterThan("expTime", now)
+                                        .findFirst();
+                            }
+
 
                             if (finalNeedDiskCache && cacheInfo != null && Paper.exist(cacheInfo.getObjGuid())) {
                                 Object objFromDb = Paper.get(cacheInfo.getObjGuid());
@@ -150,7 +160,7 @@ public class CacheHelper {
                                         Paper.put(info.getObjGuid(), o);
                                         realm.commitTransaction();
                                         realm.close();
-                                        cacheLog(" got new object save to database cache key:" + key +  "  object:" + o);
+                                        cacheLog(" got new object save to database cache key:" + key + "  object:" + o);
                                     }
                                     latch.countDown();
                                 }
@@ -163,7 +173,10 @@ public class CacheHelper {
                         }
 //                Log.d("bruce", "3 thread = " + Thread.currentThread().getName());
                         cacheLog(" got new object return it: " + key + " object:" + newResponse[0]);
-                        realm.close();
+
+                        if (realm != null) {
+                            realm.close();
+                        }
                         return newResponse[0];
                     }
                 });
