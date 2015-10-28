@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
-                MainActivityCached.testFunc(MainActivity.this, 1, true, null)
+                MainActivity$Cached.testFunc(MainActivity.this, 1, true, null)
                         .subscribeOn(Schedulers.io())
                         .observeOn(Schedulers.newThread())
                         .subscribe(new Action1<Integer>() {

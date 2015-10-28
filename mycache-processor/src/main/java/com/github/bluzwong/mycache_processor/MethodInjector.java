@@ -17,7 +17,7 @@ public class MethodInjector {
         this.funcName = funcName;
         this.returnType = returnType;
         this.params = params;
-        this.signature = funcName + typeParams.replace(" ", ".").replace(",", ".");
+        this.signature = funcName+"." + typeParams.replace(" ", "..").replace(",", "...");
         this.typeParams = typeParams;
         this.needMem = needMem;
         this.needDisk = needDisk;
@@ -43,7 +43,7 @@ public class MethodInjector {
             builder.append("target");
         }
         builder.append(".").append(funcName).append("(").append(params).append(")")
-                .append(", \"").append(signature).append("\", ").append(needMem).append(", ")
+                .append(", \"").append(originClass).append(".").append(signature).append("\", ").append(needMem).append(", ")
                 .append(memTimeout).append(", ").append(needDisk).append(", ").append(diskTimeout)
                 .append(");")
 

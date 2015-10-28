@@ -14,7 +14,7 @@ public class ClassInjector {
     private final String className;
     private final String originClassName;
     private final Set<MethodInjector> methods;
-    private static final String SUFFIX = "Cached";
+    private static final String SUFFIX = "$Cached";
 
     public ClassInjector(String classPackage, String className) {
         this.classPackage = classPackage;
@@ -41,7 +41,7 @@ public class ClassInjector {
         builder.append("import com.github.bluzwong.mycache_lib.*;\n");
         builder.append("public class ").append(this.className).append(" {\n");
         for (MethodInjector method : methods) {
-            builder.append(method.brewJava(originClassName));
+            builder.append(method.brewJava(classPackage + "." + originClassName));
         }
         builder.append("}\n"); // end of class
         return builder.toString();
