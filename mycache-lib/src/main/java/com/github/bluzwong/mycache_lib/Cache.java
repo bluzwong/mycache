@@ -11,5 +11,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Cache {
-    boolean time();
+    boolean inMemory() default true;
+    long memTimeOut() default 0;
+    boolean inDisk() default true;
+    long diskTimeOut() default 0;
 }

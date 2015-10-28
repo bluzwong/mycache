@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
-                testFuncCached(1, true, null)
+                MainActivityCached.testFunc(MainActivity.this, 1, true, null)
                         .subscribeOn(Schedulers.io())
                         .observeOn(Schedulers.newThread())
                         .subscribe(new Action1<Integer>() {
@@ -50,8 +50,8 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    @Cache(time = true)
-    public static Observable<Integer> testFunc(@Ignore int a, boolean b, List c) {
+    @Cache(inMemory = true, memTimeOut = 5000, inDisk = true, diskTimeOut = 10000)
+    public Observable<Integer> testFunc(@Ignore int a, boolean b, List c) {
         return Observable.just(null)
                 .map(new Func1<Object, Integer>() {
                     @Override
@@ -64,13 +64,6 @@ public class MainActivity extends AppCompatActivity {
                         return 123;
                     }
                 });
-    }
-
-    public static Observable<Integer> testFuncCached(int a, boolean b, List c) {
-        return (Observable<Integer>)
-                CacheHelper.getCachedMethod(testFunc(a, b, c),
-                        "public.static.testFuncCached@Int.a.boolean.b.List.c",
-                        true, 5000L,true, 10000L);
     }
 
     @Override

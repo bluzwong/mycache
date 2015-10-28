@@ -5,12 +5,12 @@ package com.github.bluzwong.mycache_processor;
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import java.io.Writer;
-import java.lang.invoke.MethodType;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -45,7 +45,6 @@ public class AnnotationProcessor extends AbstractProcessor{
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         log("start process ");
         Map<TypeElement, ClassInjector> targetClassMap = findAndParseTargets(annotations, roundEnv);
-        if (true) return true;
         for (Map.Entry<TypeElement, ClassInjector> entry : targetClassMap.entrySet()) {
             TypeElement typeElement = entry.getKey();
             ClassInjector injector = entry.getValue();
@@ -71,53 +70,81 @@ public class AnnotationProcessor extends AbstractProcessor{
         for (TypeElement te : annotations) {
             // te = zhujie
             String annoName = te.getSimpleName().toString();
-            for (AnnotationMirror mirror : te.getAnnotationMirrors()) {
+            /*for (AnnotationMirror mirror : te.getAnnotationMirrors()) {
                 log("anno mirror -> " + mirror); // @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
-            }
+            }*/
 
 
             for (Element e : roundEnv.getElementsAnnotatedWith(te)) {
                 //log("work on -> " + e.toString());
                 Name fieldName = e.getSimpleName();
                 log("fieldName -> " + fieldName); //  fieldName -> testFunc
+
                 TypeElement className = (TypeElement) e.getEnclosingElement();
+                String funcName = fieldName.toString();
+                String needMem="true" , needDisk="true",memTimeout="0", diskTimeout="0";
                 for (AnnotationMirror mirror : e.getAnnotationMirrors()) {
-                    log("annotation mirror -> " + mirror); // annotation mirror -> @com.github.bluzwong.mycache_lib.Cache(time=true)
-                    log("anno type -> " + mirror.getAnnotationType());
+                    //log("annotation mirror -> " + mirror); // annotation mirror -> @com.github.bluzwong.mycache_lib.Cache(time=true)
+                    //log("anno type -> " + mirror.getAnnotationType());
                     //log("anno values -> " + mirror.getElementValues());
                     Set<? extends ExecutableElement> set = mirror.getElementValues().keySet();
                     for (ExecutableElement element : set) {
                         log("key set -> " + element); //key set -> time()
                         log("key value ->" + mirror.getElementValues().get(element)); // key value ->true
+                        if (element.toString().equals("inMemory()")) {
+                            needMem = mirror.getElementValues().get(element).toString();
+                        }
+                        if (element.toString().equals("memTimeOut()")) {
+                            memTimeout = mirror.getElementValues().get(element).toString();
+                        }
+                        if (element.toString().equals("inDisk()")) {
+                            needDisk = mirror.getElementValues().get(element).toString();
+                        }
+                        if (element.toString().equals("diskTimeOut()")) {
+                            diskTimeout = mirror.getElementValues().get(element).toString();
+                        }
                     }
-
                 }
                 ExecutableElement executableElement = (ExecutableElement) e;
+                TypeMirror returnType = executableElement.getReturnType();
                 log("fieldInClass -> " + className); //  fieldInClass -> com.github.bluzwong.mycache.MainActivity
                 log("fieldType -> " + e.asType().toString()); //  fieldType -> (int,boolean,float)int
                 //log("type kind -> " + e.asType().getKind());// type kind -> EXECUTABLE
-                for (TypeParameterElement element : executableElement.getTypeParameters()) {
-                    log("element -> " + element);
-                }
+
+                StringBuilder paramsBuilder = new StringBuilder();
+                StringBuilder paramsTypeBuilder = new StringBuilder();
+                StringBuilder signatureBuilder = new StringBuilder();
+
                 for (VariableElement element : executableElement.getParameters()) {
                     for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
                         log("params annot -> " + mirror); //mirror -> @com.github.bluzwong.mycache_lib.Ignore
                     }
                     log("params -> " + element); // params -> a
                     log("as type -> " + element.asType()); // as type -> java.util.List
+                    if (paramsBuilder.length() != 0) {
+                        paramsBuilder.append(",");
+                    }
+                    paramsBuilder.append(element.toString());
+                    if (paramsTypeBuilder.length() != 0) {
+                        paramsTypeBuilder.append(",");
+                    }
+                    paramsTypeBuilder.append(element.asType().toString()).append(" ").append(element.toString());
                 }
                 // public static final
+                boolean isStatic = false;
                 for (Modifier modifier : e.getModifiers()) {
                     log("modifier -> " + modifier );
+                    if (modifier.toString().equals("static")) {
+                        isStatic = true;
+                    }
                 }
 
-
 //                log("simplename" + e.getSimpleName());
-                //ClassInjector injector = getOrCreateTargetClass(targetClassMap, className);
-                //boolean isProperty = false;
+                ClassInjector injector = getOrCreateTargetClass(targetClassMap, className);
 
-                //FieldInjector methodInjector = new FieldInjector(fieldName.toString(), e.asType().toString(), isProperty);
-                //injector.addField(methodInjector);
+                MethodInjector methodInjector = new MethodInjector(funcName, isStatic, returnType.toString()
+                        , paramsBuilder.toString(), paramsTypeBuilder.toString(), needMem, needDisk, memTimeout, diskTimeout);
+                injector.addMethod(methodInjector);
             }
 
         }
