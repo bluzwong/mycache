@@ -116,8 +116,19 @@ public class AnnotationProcessor extends AbstractProcessor{
                 StringBuilder signatureBuilder = new StringBuilder();
 
                 for (VariableElement element : executableElement.getParameters()) {
+                    boolean ignored = false;
                     for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
                         log("params annot -> " + mirror); //mirror -> @com.github.bluzwong.mycache_lib.Ignore
+                        if (mirror.getAnnotationType().toString().endsWith("com.github.bluzwong.mycache_lib.Ignore")) {
+                            ignored = true;
+                            break;
+                        }
+                    }
+                    if (!ignored) {
+                        if (signatureBuilder.length() != 0) {
+                            signatureBuilder.append(",");
+                        }
+                        signatureBuilder.append(element.asType().toString()).append(" ").append(element.toString());
                     }
                     log("params -> " + element); // params -> a
                     log("as type -> " + element.asType()); // as type -> java.util.List
@@ -143,7 +154,7 @@ public class AnnotationProcessor extends AbstractProcessor{
                 ClassInjector injector = getOrCreateTargetClass(targetClassMap, className);
 
                 MethodInjector methodInjector = new MethodInjector(funcName, isStatic, returnType.toString()
-                        , paramsBuilder.toString(), paramsTypeBuilder.toString(), needMem, needDisk, memTimeout, diskTimeout);
+                        , paramsBuilder.toString(), paramsTypeBuilder.toString(),signatureBuilder.toString(), needMem, needDisk, memTimeout, diskTimeout);
                 injector.addMethod(methodInjector);
             }
 

@@ -13,11 +13,11 @@ public class MethodInjector {
             memTimeout="", diskTimeout="";
 
     private boolean isStatic;
-    public MethodInjector(String funcName, boolean isStatic, String returnType, String params, String typeParams, String needMem, String needDisk, String memTimeout, String diskTimeout) {
+    public MethodInjector(String funcName, boolean isStatic, String returnType, String params, String typeParams, String signature, String needMem, String needDisk, String memTimeout, String diskTimeout) {
         this.funcName = funcName;
         this.returnType = returnType;
         this.params = params;
-        this.signature = funcName+"." + typeParams.replace(" ", "..").replace(",", "...");
+        this.signature = funcName+"." + signature.replace(" ", "..").replace(",", "...");
         this.typeParams = typeParams;
         this.needMem = needMem;
         this.needDisk = needDisk;

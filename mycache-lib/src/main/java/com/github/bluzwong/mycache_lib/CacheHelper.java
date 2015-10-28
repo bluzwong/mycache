@@ -32,7 +32,6 @@ public class CacheHelper {
                                                      final boolean needMemoryCache, final long memTime,
                                                      boolean needDiskCache, final long diskTime)
     {
-        // 不需要缓存的话直接返回
         if (originObservable == null || (!needMemoryCache && !needDiskCache)) {
             logWarn("originObservable cannot be null or needMemoryCache or needDiskCache");
             return originObservable;
@@ -45,10 +44,8 @@ public class CacheHelper {
         final String key = methodSignature;
         Object objCachedInMemory = memoryRepo.get(key);
         if (needMemoryCache && objCachedInMemory != null) {
-            // 需要内存缓存 并且获取到了缓存数据
             long outTime = memoryRepo.getTimeOut(key);
             if (outTime > System.currentTimeMillis() || outTime <= 0) {
-                // 没过期 直接返回
                 cacheLog(" hit in memory cache key:" + key + "  so return object:" + objCachedInMemory);
                 return Observable.just(objCachedInMemory);
             } else {
@@ -58,8 +55,6 @@ public class CacheHelper {
             cacheLog(" key:" + key + " in memory is missed or out of time");
         }
 
-        // 如果内存中有缓存 上面就已经返回了 以下都是内存中没有缓存的情形
-        // 先尝试从数据库获取
         final boolean finalNeedDiskCache = needDiskCache;
         return Observable.just(null)
                 .map(new Func1<Object, Object>() {
@@ -91,8 +86,6 @@ public class CacheHelper {
                                 cacheLog(" key:" + key + " in database is missed");
                             }
                         }
-                        // 如果硬盘中有缓存 上面就已经返回了 以下是本地都没有缓存的情形
-                        // 从原始数据源获取
                         final Block block;
                         synchronized (this) {
                             if (!blocks.containsKey(key)) {

@@ -1,4 +1,54 @@
+
+plugins {
+    id "java"
+    id "maven-publish"
+    id "com.jfrog.bintray" version "1.2"
+}
 apply plugin: 'java'
+
+version="0.0.1"  // The version
+group = 'com.github.bluzwong'
+task sourceJar(type: Jar) {
+    from sourceSets.main.allSource
+    classifier = 'sources'
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {  // Artifacts to publish
+            from components.java
+            artifact sourceJar
+            artifact javadocJar
+        }
+    }
+}
+
+bintray {
+    Properties properties = new Properties()
+    properties.load(project.rootProject.file('local.properties').newDataInputStream())
+    user = properties.getProperty('bintray.user')
+    key = properties.getProperty('bintray.apikey')
+
+    dryRun = false
+    publish = true
+    publications = ['mavenJava']
+    pkg {
+        repo = 'maven'         // The repository
+        name = 'mycache-processor' // The package
+        desc = 'mycache-processor'
+        websiteUrl = 'https://github.com/bluzwong/mycache'
+        issueTrackerUrl = 'https://github.com/bluzwong/mycache'
+        vcsUrl = 'https://github.com/bluzwong/mycache'
+        licenses = ['Apache-2.0']
+        labels = [['cache', 'android', 'library']]
+        publicDownloadNumbers = true
+    }
+}
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
