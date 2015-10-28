@@ -9,7 +9,6 @@ import java.lang.annotation.Target;
  * Created by wangzhijie on 2015/10/28.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface Cache {
-    boolean time();
+@Target(ElementType.PARAMETER)
+public @interface Ignore {
 }

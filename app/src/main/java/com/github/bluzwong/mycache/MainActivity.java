@@ -8,6 +8,10 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import com.github.bluzwong.mycache_lib.Cache;
+import com.github.bluzwong.mycache_lib.Ignore;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -26,6 +30,11 @@ public class MainActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
             }
         });
+    }
+
+    @Cache(time = true)
+    public static final int testFunc(@Ignore int a, boolean b, List c) {
+        return 0;
     }
 
     @Override

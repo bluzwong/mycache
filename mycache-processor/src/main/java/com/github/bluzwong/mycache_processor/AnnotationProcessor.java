@@ -1,16 +1,16 @@
 package com.github.bluzwong.mycache_processor;
 
 
+
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.Name;
-import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.*;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import java.io.Writer;
+import java.lang.invoke.MethodType;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -18,7 +18,7 @@ import java.util.Set;
 /**
  * Created by wangzhijie@wind-mobi.com on 2015/9/24.
  */
-@SupportedAnnotationTypes({"com.github.bluzwong.myflux.lib.Maintain", "com.github.bluzwong.myflux.lib.MaintainProperty"})
+@SupportedAnnotationTypes({"com.github.bluzwong.mycache_lib.Cache"})
 @SupportedSourceVersion(SourceVersion.RELEASE_7)
 public class AnnotationProcessor extends AbstractProcessor{
 
@@ -45,20 +45,7 @@ public class AnnotationProcessor extends AbstractProcessor{
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         log("start process ");
         Map<TypeElement, ClassInjector> targetClassMap = findAndParseTargets(annotations, roundEnv);
-        /*for (TypeElement te : annotations) {
-            // te = zhujie
-            log("size " + annotations.size());
-            for (Element e : roundEnv.getElementsAnnotatedWith(te)) {
-                //log("work on -> " + e.toString());
-                Name name = e.getSimpleName();
-                log("name -> " + name); //
-                Element enclosingElement = e.getEnclosingElement();
-                log("element -> " +enclosingElement); //
-
-//                log("simplename" + e.getSimpleName());
-            }
-        }
-*/
+        if (true) return true;
         for (Map.Entry<TypeElement, ClassInjector> entry : targetClassMap.entrySet()) {
             TypeElement typeElement = entry.getKey();
             ClassInjector injector = entry.getValue();
@@ -84,21 +71,53 @@ public class AnnotationProcessor extends AbstractProcessor{
         for (TypeElement te : annotations) {
             // te = zhujie
             String annoName = te.getSimpleName().toString();
+            for (AnnotationMirror mirror : te.getAnnotationMirrors()) {
+                log("anno mirror -> " + mirror); // @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
+            }
+
+
             for (Element e : roundEnv.getElementsAnnotatedWith(te)) {
                 //log("work on -> " + e.toString());
                 Name fieldName = e.getSimpleName();
-                log("fieldName -> " + fieldName); //
+                log("fieldName -> " + fieldName); //  fieldName -> testFunc
                 TypeElement className = (TypeElement) e.getEnclosingElement();
-                log("fieldInClass -> " + className); //
-                log("fieldType -> " + e.asType().toString());
-//                log("simplename" + e.getSimpleName());
-                ClassInjector injector = getOrCreateTargetClass(targetClassMap, className);
-                boolean isProperty = false;
-                if (annoName.equals("MaintainProperty")) {
-                    isProperty = true;
+                for (AnnotationMirror mirror : e.getAnnotationMirrors()) {
+                    log("annotation mirror -> " + mirror); // annotation mirror -> @com.github.bluzwong.mycache_lib.Cache(time=true)
+                    log("anno type -> " + mirror.getAnnotationType());
+                    //log("anno values -> " + mirror.getElementValues());
+                    Set<? extends ExecutableElement> set = mirror.getElementValues().keySet();
+                    for (ExecutableElement element : set) {
+                        log("key set -> " + element); //key set -> time()
+                        log("key value ->" + mirror.getElementValues().get(element)); // key value ->true
+                    }
+
                 }
-                FieldInjector methodInjector = new FieldInjector(fieldName.toString(), e.asType().toString(), isProperty);
-                injector.addField(methodInjector);
+                ExecutableElement executableElement = (ExecutableElement) e;
+                log("fieldInClass -> " + className); //  fieldInClass -> com.github.bluzwong.mycache.MainActivity
+                log("fieldType -> " + e.asType().toString()); //  fieldType -> (int,boolean,float)int
+                //log("type kind -> " + e.asType().getKind());// type kind -> EXECUTABLE
+                for (TypeParameterElement element : executableElement.getTypeParameters()) {
+                    log("element -> " + element);
+                }
+                for (VariableElement element : executableElement.getParameters()) {
+                    for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
+                        log("params annot -> " + mirror); //mirror -> @com.github.bluzwong.mycache_lib.Ignore
+                    }
+                    log("params -> " + element); // params -> a
+                    log("as type -> " + element.asType()); // as type -> java.util.List
+                }
+                // public static final
+                for (Modifier modifier : e.getModifiers()) {
+                    log("modifier -> " + modifier );
+                }
+
+
+//                log("simplename" + e.getSimpleName());
+                //ClassInjector injector = getOrCreateTargetClass(targetClassMap, className);
+                //boolean isProperty = false;
+
+                //FieldInjector methodInjector = new FieldInjector(fieldName.toString(), e.asType().toString(), isProperty);
+                //injector.addField(methodInjector);
             }
 
         }
