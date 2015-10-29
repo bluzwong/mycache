@@ -128,7 +128,7 @@ public class AnnotationProcessor extends AbstractProcessor{
                         if (signatureBuilder.length() != 0) {
                             signatureBuilder.append(",");
                         }
-                        signatureBuilder.append(element.asType().toString()).append(" ").append(element.toString());
+                        signatureBuilder.append(element.asType().toString()).append(".").append(returnType).append(" ").append(element.toString());
                     }
                     log("params -> " + element); // params -> a
                     log("as type -> " + element.asType()); // as type -> java.util.List
@@ -139,7 +139,7 @@ public class AnnotationProcessor extends AbstractProcessor{
                     if (paramsTypeBuilder.length() != 0) {
                         paramsTypeBuilder.append(",");
                     }
-                    paramsTypeBuilder.append(element.asType().toString()).append(" ").append(element.toString());
+                    paramsTypeBuilder.append("final ").append(element.asType().toString()).append(" ").append(element.toString());
                 }
                 // public static final
                 boolean isStatic = false;

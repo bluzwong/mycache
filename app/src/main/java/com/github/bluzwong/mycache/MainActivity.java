@@ -1,6 +1,8 @@
 package com.github.bluzwong.mycache;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -35,8 +37,7 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {
-
-                MainActivity$Cached.testFunc(MainActivity.this, 1, true, null)
+                /*MainActivity$Cached.testFunc(MainActivity.this, 1, true, null)
                         .subscribeOn(AndroidSchedulers.mainThread())
                         .observeOn(Schedulers.newThread())
                         .subscribe(new Action1<Integer>() {
@@ -46,9 +47,34 @@ public class MainActivity extends AppCompatActivity {
                                         .setAction("Action", null).show();
                                 Log.i("cache", "integer = " + integer);
                             }
+                        });*/
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        final int result = MainActivity$Cached.testSync(MainActivity.this, 123, true, null);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Snackbar.make(view, "integer is => " + result, Snackbar.LENGTH_LONG)
+                                        .setAction("Action", null).show();
+                                Log.i("cache", "integer = " + result);
+
+                            }
                         });
+                    }
+                }).start();
             }
         });
+    }
+
+    @Cache(inMemory = true, memTimeOut = 5000, inDisk = true, diskTimeOut = 10000)
+    public int testSync(@Ignore int a, boolean b, List c) {
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return 123;
     }
 
     @Cache(inMemory = true, memTimeOut = 5000, inDisk = true, diskTimeOut = 10000)

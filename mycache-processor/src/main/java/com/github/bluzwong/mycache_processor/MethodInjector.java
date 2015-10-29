@@ -32,17 +32,40 @@ public class MethodInjector {
                 .append(returnType).append(" ")
                 .append(funcName).append("(");
         if (!isStatic) {
-            builder.append(originClass).append(" target, ");
+            builder.append("final ").append(originClass).append(" target, ");
         }
-        builder.append(typeParams).append(") {\n")
-                .append("return CacheHelper.getCachedMethod(");
+        builder.append(typeParams).append(") {\n");
+        boolean isSync = false;
+        if (returnType.startsWith("rx.Observable<")) {
+            builder.append("return CacheHelper.getCachedMethod(");
+        } else if (!returnType.equals("void")) {
+            isSync = true;
+            builder.append("return (").append(returnType).append(")CacheHelper.getCachedMethodSync(");
+        }
+        else {
+            // no known return type found
+            builder.append("return null;}");
+            return builder.toString();
+        }
+        StringBuilder firstParam = new StringBuilder();
+
+        if (isSync) {
+            firstParam.append("new CacheHelper.Fun1() {\n" +
+                    "    @Override\n" +
+                    "    public Object func() {\n" +
+                    "        return ");
+        }
 
         if (isStatic) {
-            builder.append(originClass);
+            firstParam.append(originClass);
         } else {
-            builder.append("target");
+            firstParam.append("target");
         }
-        builder.append(".").append(funcName).append("(").append(params).append(")")
+        firstParam.append(".").append(funcName).append("(").append(params).append(")");
+        if (isSync) {
+            firstParam.append(";\n    }}");
+        }
+        builder.append(firstParam.toString())
                 .append(", \"").append(originClass).append(".").append(signature).append("\", ").append(needMem).append(", ")
                 .append(memTimeout).append(", ").append(needDisk).append(", ").append(diskTimeout)
                 .append(");")

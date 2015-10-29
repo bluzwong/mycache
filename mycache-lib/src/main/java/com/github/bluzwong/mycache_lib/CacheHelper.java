@@ -174,7 +174,6 @@ public class CacheHelper {
                 info.setExpTime(diskTime > 0 ? diskTime + System.currentTimeMillis() : Long.MAX_VALUE);
                 Paper.put(info.getObjGuid(), o);
                 realm.commitTransaction();
-                realm.close();
                 cacheLog(" got new object save to database cache key:" + key + "  object:" + o);
             }
         }
