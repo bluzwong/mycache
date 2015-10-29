@@ -1,8 +1,6 @@
 package com.github.bluzwong.mycache;
 
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -12,7 +10,6 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import com.github.bluzwong.mycache_lib.Cache;
-import com.github.bluzwong.mycache_lib.CacheHelper;
 import com.github.bluzwong.mycache_lib.CacheUtil;
 import com.github.bluzwong.mycache_lib.Ignore;
 import rx.Observable;
@@ -22,7 +19,6 @@ import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -35,55 +31,99 @@ public class MainActivity extends AppCompatActivity {
 
         CacheUtil.setApplicationContext(this);
         CacheUtil.setNeedLog(true);
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+        initBtn();
+    }
+
+    private void initBtn() {
+        findViewById(R.id.btn_sync).setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(final View view) {
-                /*MainActivity$Cached.testFunc(MainActivity.this, 1, true, null)
-                        .subscribeOn(AndroidSchedulers.mainThread())
-                        .observeOn(Schedulers.newThread())
-                        .subscribe(new Action1<Integer>() {
-                            @Override
-                            public void call(Integer integer) {
-                                Snackbar.make(view, "integer is => " + integer, Snackbar.LENGTH_LONG)
-                                        .setAction("Action", null).show();
-                                Log.i("cache", "integer = " + integer);
-                            }
-                        });*/
-                /*new Thread(new Runnable() {
+            public void onClick(final View v) {
+                new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        final int result = MainActivity$Cached.testSync(MainActivity.this, 123, null);
+                        // 使用自动生成的包装方法来缓存同步请求
+                        final int result = MainActivity$Cached.requestSync(MainActivity.this, 123, null);
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Snackbar.make(view, "integer is => " + result, Snackbar.LENGTH_LONG)
+                                Snackbar.make(v, "同步请求完成 => " + result, Snackbar.LENGTH_LONG)
                                         .setAction("Action", null).show();
                                 Log.i("cache", "integer = " + result);
-
                             }
                         });
                     }
-                }).start();*/
+                }).start();
+            }
+        });
 
-                MainActivity$Cached.myAsync(MainActivity.this, new Response() {
+        findViewById(R.id.btn_async).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(final View v) {
+                // 使用自动生成的包装方法来缓存异步请求
+                MainActivity$Cached.requestAsync(MainActivity.this, new Response() {
                     @Override
                     public void fun(int result) {
-                        Snackbar.make(view, "integer is => " + result, Snackbar.LENGTH_LONG)
+                        Snackbar.make(v, "异步请求完成 => " + result, Snackbar.LENGTH_LONG)
                                 .setAction("Action", null).show();
                         Log.i("cache", "integer = " + result);
                     }
                 }, 123, "");
             }
         });
+
+
+        findViewById(R.id.btn_rx).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(final View v) {
+                // 使用自动生成的包装方法来缓存rxjava请求
+                MainActivity$Cached.requestRxjava(MainActivity.this, 1, true, null)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Action1<Integer>() {
+                            @Override
+                            public void call(Integer integer) {
+                                Snackbar.make(v, "rxjava请求完成 => " + integer, Snackbar.LENGTH_LONG)
+                                        .setAction("Action", null).show();
+                                Log.i("cache", "integer = " + integer);
+                            }
+                        });
+            }
+        });
+
     }
+
+
+    /**
+     * 模拟耗时的同步请求
+     * @param a
+     * @param c
+     * @return
+     */
+    @Cache(inMemory = true, memTimeOut = 5000, inDisk = true, diskTimeOut = 10000)
+    public int requestSync(@Ignore int a, List c) {
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return 123;
+    }
+
+
+
 
     interface Response {
         void fun(int result);
     }
 
+    /**
+     * 模拟耗时的异步请求
+     * @param callback
+     * @param ccf
+     * @param wsd
+     */
     @Cache(inMemory = true, memTimeOut = 5000, inDisk = true, diskTimeOut = 10000)
-    public void myAsync(final Response callback, int ccf,  String wsd) {
+    public void requestAsync(final Response callback, int ccf, String wsd) {
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -102,18 +142,15 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
+    /**
+     * 模拟耗时的rxjava请求
+     * @param a
+     * @param b
+     * @param c
+     * @return
+     */
     @Cache(inMemory = true, memTimeOut = 5000, inDisk = true, diskTimeOut = 10000)
-    public int testSync(@Ignore int a, List c) {
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        return 123;
-    }
-
-    @Cache(inMemory = true, memTimeOut = 5000, inDisk = true, diskTimeOut = 10000)
-    public Observable<Integer> testFunc(@Ignore int a, boolean b, List c) {
+    public Observable<Integer> requestRxjava(@Ignore int a, boolean b, List c) {
         return Observable.just(null)
                 .map(new Func1<Object, Integer>() {
                     @Override
@@ -126,27 +163,5 @@ public class MainActivity extends AppCompatActivity {
                         return 123;
                     }
                 });
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
     }
 }
