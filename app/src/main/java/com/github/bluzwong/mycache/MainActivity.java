@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        final int result = MainActivity$Cached.testSync(MainActivity.this, 123, true, null);
+                        final int result = MainActivity$Cached.testSync(MainActivity.this, 123, null);
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Cache(inMemory = true, memTimeOut = 5000, inDisk = true, diskTimeOut = 10000)
-    public int testSync(@Ignore int a, boolean b, List c) {
+    public int testSync(@Ignore int a, List c) {
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {

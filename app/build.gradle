@@ -34,10 +34,12 @@ dependencies {
     compile 'io.reactivex:rxjava:1.0.14'
     compile 'io.reactivex:rxandroid:1.0.1'
 
-    compile project (':mycache-lib')
-    apt project (':mycache-processor')
+//    compile project (':mycache-lib')
+//    apt project (':mycache-processor')
 //    compile ('com.github.bluzwong:mycache-lib:0.0.1@aar') { transitive = true }
 //    apt 'com.github.bluzwong:mycache-processor:0.0.1'
+    compile ('com.github.bluzwong:mycache-lib:0.0.2@aar') { transitive = true }
+    apt 'com.github.bluzwong:mycache-processor:0.0.2'
 
 
 }
