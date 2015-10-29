@@ -5,12 +5,14 @@ package com.github.bluzwong.mycache_processor;
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import java.io.Writer;
+import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -64,7 +66,7 @@ public class AnnotationProcessor extends AbstractProcessor{
         return true;
     }
 
-    private Map<TypeElement, ClassInjector> findAndParseTargets(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    private Map<TypeElement, ClassInjector> findAndParseTargets(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv){
         Map<TypeElement, ClassInjector> targetClassMap = new LinkedHashMap<TypeElement, ClassInjector>();
 
         for (TypeElement te : annotations) {
@@ -114,7 +116,9 @@ public class AnnotationProcessor extends AbstractProcessor{
                 StringBuilder paramsBuilder = new StringBuilder();
                 StringBuilder paramsTypeBuilder = new StringBuilder();
                 StringBuilder signatureBuilder = new StringBuilder();
-
+                boolean isAsync = returnType.toString().equals("void");
+                boolean firstParamsTaked = false;
+                String callBackCls = "", callBackFunc="", callBackParam ="";
                 for (VariableElement element : executableElement.getParameters()) {
                     boolean ignored = false;
                     for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
@@ -132,6 +136,25 @@ public class AnnotationProcessor extends AbstractProcessor{
                     }
                     log("params -> " + element); // params -> a
                     log("as type -> " + element.asType()); // as type -> java.util.List
+
+                    if (isAsync && !firstParamsTaked) {
+                        callBackCls = element.asType().toString();
+
+                        TypeElement element1 = (TypeElement) typeUtils.asElement(element.asType());
+                        if (element1 != null) {
+                            for (Element element2 : element1.getEnclosedElements()) {
+                                firstParamsTaked = true;
+                                ExecutableElement funcToCall = (ExecutableElement) element2;
+                                callBackFunc = funcToCall.getSimpleName().toString();
+                                log("element as type => " + funcToCall.getSimpleName());
+                                for (VariableElement variableElement : funcToCall.getParameters()) {
+                                    callBackParam = variableElement.asType().toString();
+                                }
+
+                                break;
+                            }
+                        }
+                    }
                     if (paramsBuilder.length() != 0) {
                         paramsBuilder.append(",");
                     }
@@ -155,6 +178,11 @@ public class AnnotationProcessor extends AbstractProcessor{
 
                 MethodInjector methodInjector = new MethodInjector(funcName, isStatic, returnType.toString()
                         , paramsBuilder.toString(), paramsTypeBuilder.toString(),signatureBuilder.toString(), needMem, needDisk, memTimeout, diskTimeout);
+                if (isAsync) {
+                    methodInjector.setCallBackCls(callBackCls);
+                    methodInjector.setCallBackFunc(callBackFunc);
+                    methodInjector.setCallBackParam(callBackParam);
+                }
                 injector.addMethod(methodInjector);
             }
 

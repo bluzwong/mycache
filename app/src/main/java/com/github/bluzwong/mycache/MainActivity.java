@@ -12,6 +12,7 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import com.github.bluzwong.mycache_lib.Cache;
+import com.github.bluzwong.mycache_lib.CacheHelper;
 import com.github.bluzwong.mycache_lib.CacheUtil;
 import com.github.bluzwong.mycache_lib.Ignore;
 import rx.Observable;
@@ -21,6 +22,7 @@ import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -48,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
                                 Log.i("cache", "integer = " + integer);
                             }
                         });*/
-                new Thread(new Runnable() {
+                /*new Thread(new Runnable() {
                     @Override
                     public void run() {
                         final int result = MainActivity$Cached.testSync(MainActivity.this, 123, null);
@@ -62,9 +64,42 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
                     }
-                }).start();
+                }).start();*/
+
+                MainActivity$Cached.myAsync(MainActivity.this, new Response() {
+                    @Override
+                    public void fun(int result) {
+                        Snackbar.make(view, "integer is => " + result, Snackbar.LENGTH_LONG)
+                                .setAction("Action", null).show();
+                        Log.i("cache", "integer = " + result);
+                    }
+                }, 123, "");
             }
         });
+    }
+
+    interface Response {
+        void fun(int result);
+    }
+
+    @Cache(inMemory = true, memTimeOut = 5000, inDisk = true, diskTimeOut = 10000)
+    public void myAsync(final Response callback, int ccf,  String wsd) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        callback.fun(123);
+                    }
+                });
+            }
+        }).start();
     }
 
     @Cache(inMemory = true, memTimeOut = 5000, inDisk = true, diskTimeOut = 10000)
