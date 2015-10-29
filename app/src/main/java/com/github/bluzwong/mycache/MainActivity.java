@@ -10,10 +10,10 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import com.github.bluzwong.mycache_lib.Cache;
-import com.github.bluzwong.mycache_lib.CacheHelper;
 import com.github.bluzwong.mycache_lib.CacheUtil;
 import com.github.bluzwong.mycache_lib.Ignore;
 import rx.Observable;
+import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.schedulers.Schedulers;
@@ -34,15 +34,16 @@ public class MainActivity extends AppCompatActivity {
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+            public void onClick(final View view) {
+
                 MainActivity$Cached.testFunc(MainActivity.this, 1, true, null)
-                        .subscribeOn(Schedulers.io())
+                        .subscribeOn(AndroidSchedulers.mainThread())
                         .observeOn(Schedulers.newThread())
                         .subscribe(new Action1<Integer>() {
                             @Override
                             public void call(Integer integer) {
+                                Snackbar.make(view, "integer is => " + integer, Snackbar.LENGTH_LONG)
+                                        .setAction("Action", null).show();
                                 Log.i("cache", "integer = " + integer);
                             }
                         });
