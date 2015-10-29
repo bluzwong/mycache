@@ -112,7 +112,7 @@ public class MethodInjector {
                             "                        return resultObj[0];\n" +
                             "                    }\n" +
                             "                }, ");
-            builder.append("\"").append(signature).append("\", ").append(needMem).append(", ")
+            builder.append("\"").append(originClass).append(".").append(signature).append("\", ").append(needMem).append(", ")
                     .append(memTimeout).append(", ").append(needDisk).append(", ").append(diskTimeout)
                     .append(");");
             builder.append("new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {\n" +

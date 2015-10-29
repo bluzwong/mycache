@@ -116,6 +116,7 @@ public class AnnotationProcessor extends AbstractProcessor{
                 StringBuilder paramsBuilder = new StringBuilder();
                 StringBuilder paramsTypeBuilder = new StringBuilder();
                 StringBuilder signatureBuilder = new StringBuilder();
+                signatureBuilder.append(".").append(returnType);
                 boolean isAsync = returnType.toString().equals("void");
                 boolean firstParamsTaked = false;
                 String callBackCls = "", callBackFunc="", callBackParam ="";
@@ -128,11 +129,12 @@ public class AnnotationProcessor extends AbstractProcessor{
                             break;
                         }
                     }
-                    if (!ignored) {
+                    if (!ignored && (!isAsync || firstParamsTaked)) {
                         if (signatureBuilder.length() != 0) {
                             signatureBuilder.append(",");
                         }
-                        signatureBuilder.append(element.asType().toString()).append(".").append(returnType).append(" ").append(element.toString());
+                        signatureBuilder.append(element.asType().toString()).append(" \"+").append(element.toString()).append("+\"");
+                        log("signature => " + signatureBuilder.toString());
                     }
                     log("params -> " + element); // params -> a
                     log("as type -> " + element.asType()); // as type -> java.util.List
