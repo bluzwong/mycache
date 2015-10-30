@@ -9,16 +9,18 @@ import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
-import com.github.bluzwong.mycache_lib.Cache;
-import com.github.bluzwong.mycache_lib.CacheUtil;
-import com.github.bluzwong.mycache_lib.Ignore;
+import com.github.bluzwong.mycache_lib.*;
 import rx.Observable;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -67,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
                                 .setAction("Action", null).show();
                         Log.i("cache", "integer = " + result);
                     }
-                }, 123, "");
+                }, "");
             }
         });
 
@@ -119,11 +121,10 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 模拟耗时的异步请求
      * @param callback
-     * @param ccf
      * @param wsd
      */
     @Cache(inMemory = true, memTimeOut = 5000, inDisk = true, diskTimeOut = 10000)
-    public void requestAsync(final Response callback, int ccf, String wsd) {
+    public void requestAsync(@Callback final Response callback, String wsd) {
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -141,6 +142,31 @@ public class MainActivity extends AppCompatActivity {
             }
         }).start();
     }
+/*
+    public void requestAsyncDynamic(final Response callback, final int ccf, final String wsd) {
+        final CountDownLatch latch = new CountDownLatch(1);
+        Object result;
+        Object instance = Proxy.newProxyInstance(getClassLoader(), new Class[]{Response.class}, new InvocationHandler() {
+            @Override
+            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                return null;
+            }
+        });
+
+        final Response myResponse = (Response) instance;
+        Object cachedResult = CacheHelper.getCachedMethodSync(new CacheHelper.Fun1() {
+            @Override
+            public Object func() {
+                requestAsync(myResponse, ccf, wsd);
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return ;
+            }
+        }, "ccf", true, 1111, true, 1111);
+    }*/
 
     /**
      * 模拟耗时的rxjava请求

@@ -12,6 +12,7 @@ public class MethodInjector {
             needMem = "", needDisk = "",
             memTimeout = "", diskTimeout = "";
 
+    private String originCallBack = "";
     private String callBackCls = "", callBackFunc = "", callBackParam = "";
 
     public void setCallBackCls(String callBackCls) {
@@ -24,6 +25,10 @@ public class MethodInjector {
 
     public void setCallBackParam(String callBackParam) {
         this.callBackParam = callBackParam;
+    }
+
+    public void setOriginCallBack(String originCallBack) {
+        this.originCallBack = originCallBack;
     }
 
     private boolean isStatic;
@@ -93,9 +98,8 @@ public class MethodInjector {
         } else {
             firstParam.append("target");
         }
-        String asyncFirstParam = params.substring(0, params.indexOf(","));
         if (isAsync) {
-            firstParam.append(".").append(funcName).append("(").append("myCallBack ").append(params.substring(params.indexOf(","))).append(");");
+            firstParam.append(".").append(funcName).append("(").append(params.replace("${myCallBack}", "myCallBack ")).append(");");
         } else {
             firstParam.append(".").append(funcName).append("(").append(params).append(")");
         }
@@ -118,7 +122,7 @@ public class MethodInjector {
             builder.append("new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {\n" +
                     "                    @Override\n" +
                     "                    public void run() {\n" +
-                    "                        " + asyncFirstParam + "." + callBackFunc + "((" + callBackParam + ") objAfterCache);\n" +
+                    "                        " + originCallBack + "." + callBackFunc + "((" + callBackParam + ") objAfterCache);\n" +
                     "                    }\n" +
                     "                });\n" +
                     "            }\n" +

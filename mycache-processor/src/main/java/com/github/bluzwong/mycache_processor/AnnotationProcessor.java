@@ -118,18 +118,21 @@ public class AnnotationProcessor extends AbstractProcessor{
                 StringBuilder signatureBuilder = new StringBuilder();
                 signatureBuilder.append(".").append(returnType);
                 boolean isAsync = returnType.toString().equals("void");
-                boolean firstParamsTaked = false;
                 String callBackCls = "", callBackFunc="", callBackParam ="";
+                String originCallback = "";
                 for (VariableElement element : executableElement.getParameters()) {
                     boolean ignored = false;
+                    boolean thisIsCallBack = false;
                     for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
                         log("params annot -> " + mirror); //mirror -> @com.github.bluzwong.mycache_lib.Ignore
                         if (mirror.getAnnotationType().toString().endsWith("com.github.bluzwong.mycache_lib.Ignore")) {
                             ignored = true;
-                            break;
+                        }
+                        if (mirror.getAnnotationType().toString().endsWith("com.github.bluzwong.mycache_lib.Callback")) {
+                            thisIsCallBack = true;
                         }
                     }
-                    if (!ignored && (!isAsync || firstParamsTaked)) {
+                    if (!ignored && !thisIsCallBack) {
                         if (signatureBuilder.length() != 0) {
                             signatureBuilder.append(",");
                         }
@@ -139,13 +142,12 @@ public class AnnotationProcessor extends AbstractProcessor{
                     log("params -> " + element); // params -> a
                     log("as type -> " + element.asType()); // as type -> java.util.List
 
-                    if (isAsync && !firstParamsTaked) {
+                    if (isAsync && thisIsCallBack) {
                         callBackCls = element.asType().toString();
 
                         TypeElement element1 = (TypeElement) typeUtils.asElement(element.asType());
                         if (element1 != null) {
                             for (Element element2 : element1.getEnclosedElements()) {
-                                firstParamsTaked = true;
                                 ExecutableElement funcToCall = (ExecutableElement) element2;
                                 callBackFunc = funcToCall.getSimpleName().toString();
                                 log("element as type => " + funcToCall.getSimpleName());
@@ -160,7 +162,12 @@ public class AnnotationProcessor extends AbstractProcessor{
                     if (paramsBuilder.length() != 0) {
                         paramsBuilder.append(",");
                     }
-                    paramsBuilder.append(element.toString());
+                    if (thisIsCallBack) {
+                        paramsBuilder.append("${myCallBack}");
+                        originCallback = element.toString();
+                    } else {
+                        paramsBuilder.append(element.toString());
+                    }
                     if (paramsTypeBuilder.length() != 0) {
                         paramsTypeBuilder.append(",");
                     }
@@ -184,6 +191,7 @@ public class AnnotationProcessor extends AbstractProcessor{
                     methodInjector.setCallBackCls(callBackCls);
                     methodInjector.setCallBackFunc(callBackFunc);
                     methodInjector.setCallBackParam(callBackParam);
+                    methodInjector.setOriginCallBack(originCallback);
                 }
                 injector.addMethod(methodInjector);
             }
