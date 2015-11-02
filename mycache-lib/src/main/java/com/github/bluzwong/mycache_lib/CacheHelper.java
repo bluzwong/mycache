@@ -10,6 +10,7 @@ import rx.functions.Func1;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Created by wangzhijie on 2015/10/28.
@@ -38,12 +39,19 @@ public class CacheHelper {
                             @Override
                             public Object func() {
                                 final Object[] returnObj = {null};
+                                final CountDownLatch latch = new CountDownLatch(1);
                                 originObservable.subscribe(new Action1() {
                                     @Override
                                     public void call(Object o) {
                                         returnObj[0] = o;
+                                        latch.countDown();
                                     }
                                 });
+                                try {
+                                    latch.await();
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
                                 return returnObj[0];
                             }
                         }, methodSignature, needMemoryCache, memTime, needDiskCache, diskTime);
