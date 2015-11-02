@@ -14,7 +14,7 @@ public class ClassInjector {
     private final String className;
     private final String originClassName;
     private final Set<MethodInjector> methods;
-    private static final String SUFFIX = "$Cached";
+    private static final String SUFFIX = "_Cache";
 
     public ClassInjector(String classPackage, String className) {
         this.classPackage = classPackage;

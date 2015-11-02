@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         // 使用自动生成的包装方法来缓存同步请求
-                        final int result = MainActivity$Cached.requestSync(MainActivity.this, 123, null);
+                        final int result = MainActivity_Cache.requestSync(MainActivity.this, 123, null);
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(final View v) {
                 // 使用自动生成的包装方法来缓存异步请求
-                MainActivity$Cached.requestAsync(MainActivity.this, new Response() {
+                MainActivity_Cache.requestAsync(MainActivity.this, new Response() {
                     @Override
                     public void fun(int result) {
                         Snackbar.make(v, "异步请求完成 => " + result, Snackbar.LENGTH_LONG)
@@ -78,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(final View v) {
                 // 使用自动生成的包装方法来缓存rxjava请求
-                MainActivity$Cached.requestRxjava(MainActivity.this, 1, true, null)
+                MainActivity_Cache.requestRxjava(MainActivity.this)
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(new Action1<Integer>() {
@@ -176,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
      * @return
      */
     @Cache(inMemory = true, memTimeOut = 5000, inDisk = true, diskTimeOut = 10000)
-    public Observable<Integer> requestRxjava(@Ignore int a, boolean b, List c) {
+    public Observable<Integer> requestRxjava() {
         return Observable.just(null)
                 .map(new Func1<Object, Integer>() {
                     @Override

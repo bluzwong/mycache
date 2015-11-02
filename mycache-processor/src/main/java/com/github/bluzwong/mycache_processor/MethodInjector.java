@@ -52,7 +52,10 @@ public class MethodInjector {
                 .append(returnType).append(" ")
                 .append(funcName).append("(");
         if (!isStatic) {
-            builder.append("final ").append(originClass).append(" target, ");
+            builder.append("final ").append(originClass).append(" target");
+        }
+        if (!typeParams.equals("")) {
+            builder.append(", ");
         }
         builder.append(typeParams).append(") {\n");
         boolean isSync = false;
