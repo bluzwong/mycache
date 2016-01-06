@@ -27,14 +27,22 @@ public class CacheHelper {
     }
 
     private static final Map<String, Block> blocks = new HashMap<String, Block>();
-
+    private static final Map<String, CountDownLatch> latches = new HashMap<String, CountDownLatch>();
 
     public static Observable getCachedMethod(final Observable originObservable, final String methodSignature,
-                                                     final boolean needMemoryCache, final long memTime,
-                                                     final boolean needDiskCache, final long diskTime)
-    {
-        // return Observable.concat()
-        return Observable.just(null)
+                                             final boolean needMemoryCache, final long memTime,
+                                             final boolean needDiskCache, final long diskTime) {
+        return Observable.concat(getInMemCache(methodSignature, needMemoryCache, memTime),
+                getInDiskCache(methodSignature, needDiskCache, diskTime, needMemoryCache),
+                getCheckBeforeOrigin(originObservable, methodSignature, needMemoryCache, memTime, needDiskCache, diskTime))
+                .filter(new Func1() {
+                    @Override
+                    public Object call(Object o) {
+                        return o != null;
+                    }
+                })
+                .first();
+        /*return Observable.just(null)
                 .map(new Func1() {
                     @Override
                     public Object call(Object o) {
@@ -59,10 +67,45 @@ public class CacheHelper {
                             }
                         }, methodSignature, needMemoryCache, memTime, needDiskCache, diskTime);
                     }
-                });
+                });*/
     }
 
-    private Observable<Object> getInMemCache(final String methodSignature, final boolean needMemoryCache, final long memTime) {
+    private static Observable getCheckBeforeOrigin(final Observable originObservable, final String methodSignature,
+                                                   final boolean needMemoryCache, final long memTime,
+                                                   final boolean needDiskCache, final long diskTime) {
+        return Observable.concat(Observable.just(null)
+                        .map(new Func1() {
+                            @Override
+                            public Object call(Object nil) {
+                                // block thread  wait until the first request finished
+                                final CountDownLatch latch;
+                                synchronized (CacheHelper.class) {
+                                    if (!latches.containsKey(methodSignature)) {
+                                        latch = new CountDownLatch(1);
+                                        latches.put(methodSignature, latch);
+                                    } else {
+                                        latch = latches.get(methodSignature);
+                                        try {
+                                            latch.await();
+                                        } catch (InterruptedException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                }
+                                return null;
+                            }
+                        }), getInMemCache(methodSignature, needMemoryCache, memTime), getInDiskCache(methodSignature, needDiskCache, diskTime, needMemoryCache),
+                getFromOriginThenMakeCache(originObservable, methodSignature, needMemoryCache, memTime, needDiskCache, diskTime))
+                .filter(new Func1() {
+                    @Override
+                    public Object call(Object o) {
+                        return o != null;
+                    }
+                })
+                .first();
+    }
+
+    private static Observable<Object> getInMemCache(final String methodSignature, final boolean needMemoryCache, final long memTime) {
         return Observable.create(new Observable.OnSubscribe<Object>() {
             @Override
             public void call(Subscriber<? super Object> subscriber) {
@@ -90,20 +133,58 @@ public class CacheHelper {
             }
         });
     }
-    public static Observable getFromOriginThenMakeCache(final Observable originObservable, final String methodSignature,
-                                             final boolean needMemoryCache, final long memTime,
-                                             final boolean needDiskCache, final long diskTime) {
+
+
+    private static Observable getFromOriginThenMakeCache(final Observable originObservable, final String methodSignature,
+                                                         final boolean needMemoryCache, final long memTime,
+                                                         final boolean needDiskCache, final long diskTime) {
+
         return originObservable.map(new Func1() {
             @Override
             public Object call(Object o) {
                 // save to mem
+                if (o != null && needMemoryCache) {
+                    final DefaultCacheMemoryHolder memoryRepo = DefaultCacheMemoryHolder.INSTANCE;
+                    memoryRepo.put(methodSignature, o, memTime > 0 ? memTime + System.currentTimeMillis() : Long.MAX_VALUE, 0);
+                    cacheLog(" got new object save to memory cache key:" + methodSignature + "  object:" + o);
+                }
                 // save to disk
+                if (o != null && needDiskCache) {
+                    Realm realm = Realm.getInstance(CacheUtil.getApplicationContext());
+                    //CacheObject cacheObject = new CacheObject();
+                    realm.beginTransaction();
+                    CacheInfo info;
+                    info = realm.where(CacheInfo.class).equalTo("key", methodSignature).findFirst();
+                    if (info == null) {
+                        info = realm.createObject(CacheInfo.class);
+                        info.setKey(methodSignature);
+                        String guid = UUID.randomUUID().toString();
+                        info.setObjGuid(guid);
+                    }
+                    info.setEditTime(System.currentTimeMillis());
+                    info.setExpTime(diskTime > 0 ? diskTime + System.currentTimeMillis() : Long.MAX_VALUE);
+                    Paper.put(info.getObjGuid(), o);
+                    realm.commitTransaction();
+                    cacheLog(" got new object save to database cache key:" + methodSignature + "  object:" + o);
+                }
+
+                // allow other thread to get cache or request
+                final CountDownLatch latch;
+                synchronized (CacheHelper.class) {
+                    if (latches.containsKey(methodSignature)) {
+                        latch = latches.get(methodSignature);
+                        latches.remove(methodSignature);
+                        latch.countDown();
+                    }
+                }
                 return o;
             }
         });
+
+
     }
 
-    private Observable<Object> getInDiskCache(final String methodSignature, final boolean needDiskCache, final long diskTime, final boolean needMemoryCache) {
+    private static Observable<Object> getInDiskCache(final String methodSignature, final boolean needDiskCache, final long diskTime, final boolean needMemoryCache) {
         return Observable.create(new Observable.OnSubscribe<Object>() {
             @Override
             public void call(Subscriber<? super Object> subscriber) {
@@ -129,7 +210,7 @@ public class CacheHelper {
                     realm.close();
                     if (needMemoryCache) {
                         final DefaultCacheMemoryHolder memoryRepo = DefaultCacheMemoryHolder.INSTANCE;
-                        memoryRepo.put(methodSignature, o, cacheInfo.getExpTime(), 0);
+                        memoryRepo.put(methodSignature, objFromDb, cacheInfo.getExpTime(), 0);
                         cacheLog(" hit in database cache key:" + methodSignature + "  so save to memory object:" + 0);
                     }
                     subscriber.onNext(objFromDb);
@@ -149,13 +230,12 @@ public class CacheHelper {
 
     public static Object getCachedMethodSync(final Fun1 originFunction, String methodSignature,
                                              final boolean needMemoryCache, final long memTime,
-                                             boolean needDiskCache, final long diskTime)
-    {
+                                             boolean needDiskCache, final long diskTime) {
         if (originFunction == null || (!needMemoryCache && !needDiskCache)) {
             logWarn("originObservable cannot be null or needMemoryCache or needDiskCache");
             return null;
         }
-        if (needDiskCache  && CacheUtil.getApplicationContext() == null) {
+        if (needDiskCache && CacheUtil.getApplicationContext() == null) {
             needDiskCache = false;
             logWarn("!!!Cannot init database caused no Context. Please call CacheUtil.setApplicationContext(this); in onCreate().");
         }
@@ -235,7 +315,7 @@ public class CacheHelper {
                     memoryRepo.put(key, objFromDb, cacheInfo.getExpTime(), 0);
                     cacheLog(" hit in database cache key:" + key + "  so save to memory object:" + objFromDb);
                 }
-                cacheLog(" hit in blocked database cache key:" + key +  "  so return object:" + cachedValueAfterBlock);
+                cacheLog(" hit in blocked database cache key:" + key + "  so return object:" + cachedValueAfterBlock);
                 realm.close();
                 return objFromDb;
             }
@@ -277,6 +357,7 @@ public class CacheHelper {
         }
         return newResponse[0];
     }
+
     private static void cacheLog(String msg) {
         cacheLog(msg, -1);
     }
@@ -286,6 +367,7 @@ public class CacheHelper {
             Log.w("mycache", msg);
         }
     }
+
     private static void cacheLog(String msg, long startTime) {
         if (CacheUtil.isNeedLog()) {
             if (startTime > 0) {
