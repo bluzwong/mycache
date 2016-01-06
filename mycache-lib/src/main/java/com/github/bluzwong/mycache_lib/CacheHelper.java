@@ -4,7 +4,9 @@ import android.util.Log;
 import io.paperdb.Paper;
 import io.realm.Realm;
 import rx.Observable;
+import rx.Subscriber;
 import rx.functions.Action1;
+import rx.functions.Func0;
 import rx.functions.Func1;
 
 import java.util.HashMap;
@@ -31,6 +33,7 @@ public class CacheHelper {
                                                      final boolean needMemoryCache, final long memTime,
                                                      final boolean needDiskCache, final long diskTime)
     {
+        // return Observable.concat()
         return Observable.just(null)
                 .map(new Func1() {
                     @Override
@@ -58,6 +61,48 @@ public class CacheHelper {
                     }
                 });
     }
+
+    private Observable<Object> getInMemCache(String methodSignature, final boolean needMemoryCache, final long memTime) {
+        return Observable.create(new Observable.OnSubscribe<Object>() {
+            @Override
+            public void call(Subscriber<? super Object> subscriber) {
+                Object obj = null;
+                if (obj != null) {
+                    subscriber.onNext(obj);
+                    // save to
+                } else {
+                    subscriber.onCompleted();
+                }
+            }
+        });
+    }
+    public static Observable getFromOriginThenMakeCache(final Observable originObservable, final String methodSignature,
+                                             final boolean needMemoryCache, final long memTime,
+                                             final boolean needDiskCache, final long diskTime) {
+        return originObservable.map(new Func1() {
+            @Override
+            public Object call(Object o) {
+                // save to mem
+                // save to disk
+                return o;
+            }
+        });
+    }
+    private Observable<Object> getInDiskCache(String methodSignature, final boolean needDiskCache, final long diskTime) {
+        return Observable.create(new Observable.OnSubscribe<Object>() {
+            @Override
+            public void call(Subscriber<? super Object> subscriber) {
+                Object obj = null;
+                if (obj != null) {
+                    subscriber.onNext(obj);
+                    // save to
+                } else {
+                    subscriber.onCompleted();
+                }
+            }
+        });
+    }
+
 
     public interface Fun1 {
         Object func();
