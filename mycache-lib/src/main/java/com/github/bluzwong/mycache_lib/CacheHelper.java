@@ -62,17 +62,31 @@ public class CacheHelper {
                 });
     }
 
-    private Observable<Object> getInMemCache(String methodSignature, final boolean needMemoryCache, final long memTime) {
+    private Observable<Object> getInMemCache(final String methodSignature, final boolean needMemoryCache, final long memTime) {
         return Observable.create(new Observable.OnSubscribe<Object>() {
             @Override
             public void call(Subscriber<? super Object> subscriber) {
-                Object obj = null;
-                if (obj != null) {
-                    subscriber.onNext(obj);
-                    // save to
-                } else {
+                if (!needMemoryCache) {
                     subscriber.onCompleted();
+                    return;
                 }
+
+                final DefaultCacheMemoryHolder memoryRepo = DefaultCacheMemoryHolder.INSTANCE;
+                Object objCachedInMemory = memoryRepo.get(methodSignature);
+                if (objCachedInMemory != null) {
+                    long outTime = memoryRepo.getTimeOut(methodSignature);
+                    if (outTime > System.currentTimeMillis() || outTime <= 0) {
+                        cacheLog(" hit in memory cache key:" + methodSignature + "  so return object:" + objCachedInMemory);
+                        subscriber.onNext(objCachedInMemory);
+                        return;
+                        // return objCachedInMemory;
+                    } else {
+                        cacheLog(" key:" + methodSignature + " in memory is out of time");
+                    }
+                } else {
+                    cacheLog(" key:" + methodSignature + " in memory is missed or out of time");
+                }
+                subscriber.onCompleted();
             }
         });
     }
@@ -88,17 +102,42 @@ public class CacheHelper {
             }
         });
     }
-    private Observable<Object> getInDiskCache(String methodSignature, final boolean needDiskCache, final long diskTime) {
+
+    private Observable<Object> getInDiskCache(final String methodSignature, final boolean needDiskCache, final long diskTime, final boolean needMemoryCache) {
         return Observable.create(new Observable.OnSubscribe<Object>() {
             @Override
             public void call(Subscriber<? super Object> subscriber) {
-                Object obj = null;
-                if (obj != null) {
-                    subscriber.onNext(obj);
-                    // save to
-                } else {
+                if (!needDiskCache || CacheUtil.getApplicationContext() == null) {
                     subscriber.onCompleted();
+                    return;
                 }
+                final long now = System.currentTimeMillis();
+                Realm realm = null;
+                if (CacheUtil.getApplicationContext() != null) {
+                    realm = Realm.getInstance(CacheUtil.getApplicationContext());
+                }
+                CacheInfo cacheInfo = null;
+                if (realm != null) {
+                    cacheInfo = realm.where(CacheInfo.class)
+                            .equalTo("key", methodSignature)
+                            .greaterThan("expTime", now)
+                            .findFirst();
+                }
+                if (cacheInfo != null && Paper.exist(cacheInfo.getObjGuid())) {
+                    Object objFromDb = Paper.get(cacheInfo.getObjGuid());
+                    cacheLog(" hit in database cache key:" + methodSignature + "  so return object:" + objFromDb);
+                    realm.close();
+                    if (needMemoryCache) {
+                        final DefaultCacheMemoryHolder memoryRepo = DefaultCacheMemoryHolder.INSTANCE;
+                        memoryRepo.put(methodSignature, o, cacheInfo.getExpTime(), 0);
+                        cacheLog(" hit in database cache key:" + methodSignature + "  so save to memory object:" + 0);
+                    }
+                    subscriber.onNext(objFromDb);
+                    return;
+                } else {
+                    cacheLog(" key:" + methodSignature + " in database is missed");
+                }
+                subscriber.onCompleted();
             }
         });
     }
