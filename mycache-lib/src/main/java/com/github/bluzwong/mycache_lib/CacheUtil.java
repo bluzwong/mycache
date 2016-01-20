@@ -60,7 +60,8 @@ public class CacheUtil {
                 if (!hasCached) {
                     long timeOut = 60_000;
                     if (map != null) {
-                        timeOut = map.urlForMap(new URL(urlString));
+                        URL url = new URL(urlString);
+                        timeOut = map.urlForMap(url, url.getAuthority(), url.getPath());
                     }
                     CacheHelper.cacheLog("requesting url => " + urlString + "\n save to memory cache with timeout @ " + timeOut + "ms");
                     manager.put(urlString, timeOut);

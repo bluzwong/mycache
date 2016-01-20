@@ -36,10 +36,14 @@ dependencies {
 //    compile ('com.github.bluzwong:mycache-lib:0.0.1@aar') { transitive = true }
 //    apt 'com.github.bluzwong:mycache-processor:0.0.1'
 
-    compile project (':mycache-lib')
-    apt project (':mycache-processor')
-//    apt 'com.github.bluzwong:mycache-processor:0.0.5'
-//    compile ('com.github.bluzwong:mycache-lib:0.0.6@aar') { transitive = true }
+    compile 'com.squareup.retrofit2:retrofit:2.0.0-beta3'
+    compile 'com.squareup.retrofit2:converter-gson:2.0.0-beta3'
+    compile 'com.squareup.retrofit2:adapter-rxjava:2.0.0-beta3'
+
+//    compile project (':mycache-lib')
+//    apt project (':mycache-processor')
+    apt 'com.github.bluzwong:mycache-processor:0.1.0'
+    compile ('com.github.bluzwong:mycache-lib:0.1.0@aar')// { transitive = true }
 
 
 }
