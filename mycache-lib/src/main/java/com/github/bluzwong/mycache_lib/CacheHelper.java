@@ -6,6 +6,7 @@ import rx.Subscriber;
 import rx.functions.Func1;
 
 
+
 /**
  * Created by wangzhijie on 2015/10/28.
  */
@@ -38,17 +39,17 @@ public class CacheHelper {
         }).first();
     }
 
-    private static void cacheLog(String msg) {
+    static void cacheLog(String msg) {
         cacheLog(msg, -1);
     }
 
-    private static void logWarn(String msg) {
+    static void logWarn(String msg) {
         if (CacheUtil.isNeedLog()) {
             Log.w("mycache", msg);
         }
     }
 
-    private static void cacheLog(String msg, long startTime) {
+    static void cacheLog(String msg, long startTime) {
         if (CacheUtil.isNeedLog()) {
             if (startTime > 0) {
                 long t = System.currentTimeMillis() - startTime;
