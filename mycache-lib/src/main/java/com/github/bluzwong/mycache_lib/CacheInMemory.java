@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
  * Created by wangzhijie on 2015/10/28.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.PARAMETER)
-public @interface Callback {
-
+@Target(ElementType.METHOD)
+public @interface CacheInMemory {
+    long timeOut() default 0;
 }

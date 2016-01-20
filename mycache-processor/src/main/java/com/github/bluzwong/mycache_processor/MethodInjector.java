@@ -9,40 +9,22 @@ import java.util.Map;
  */
 public class MethodInjector {
     private String funcName = "", returnType = "", params = "", signature = "", typeParams = "",
-            needMem = "", needDisk = "",
-            memTimeout = "", diskTimeout = "";
+
+            memTimeout = "";
 
     private String originCallBack = "";
     private String callBackCls = "", callBackFunc = "", callBackParam = "";
 
-    public void setCallBackCls(String callBackCls) {
-        this.callBackCls = callBackCls;
-    }
-
-    public void setCallBackFunc(String callBackFunc) {
-        this.callBackFunc = callBackFunc;
-    }
-
-    public void setCallBackParam(String callBackParam) {
-        this.callBackParam = callBackParam;
-    }
-
-    public void setOriginCallBack(String originCallBack) {
-        this.originCallBack = originCallBack;
-    }
 
     private boolean isStatic;
 
-    public MethodInjector(String funcName, boolean isStatic, String returnType, String params, String typeParams, String signature, String needMem, String needDisk, String memTimeout, String diskTimeout) {
+    public MethodInjector(String funcName, boolean isStatic, String returnType, String params, String typeParams, String signature, String memTimeout) {
         this.funcName = funcName;
         this.returnType = returnType;
         this.params = params;
         this.signature = funcName + "." + signature.replace(" ", "..").replace(",", "...");
         this.typeParams = typeParams;
-        this.needMem = needMem;
-        this.needDisk = needDisk;
         this.memTimeout = memTimeout;
-        this.diskTimeout = diskTimeout;
         this.isStatic = isStatic;
     }
 
@@ -119,8 +101,8 @@ public class MethodInjector {
                             "                        return resultObj[0];\n" +
                             "                    }\n" +
                             "                }, ");
-            builder.append("\"").append(originClass).append(".").append(signature).append("\", ").append(needMem).append(", ")
-                    .append(memTimeout).append(", ").append(needDisk).append(", ").append(diskTimeout)
+            builder.append("\"").append(originClass).append(".").append(signature).append("\", ")
+                    .append(memTimeout)
                     .append(");");
             builder.append("new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {\n" +
                     "                    @Override\n" +
@@ -133,8 +115,8 @@ public class MethodInjector {
 
         } else {
             builder.append(firstParam.toString())
-                    .append(", \"").append(originClass).append(".").append(signature).append("\", ").append(needMem).append(", ")
-                    .append(memTimeout).append(", ").append(needDisk).append(", ").append(diskTimeout)
+                    .append(", \"").append(originClass).append(".").append(signature).append("\", ")
+                    .append(memTimeout)
                     .append(");");
 
         }

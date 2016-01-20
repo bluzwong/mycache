@@ -1,361 +1,41 @@
 package com.github.bluzwong.mycache_lib;
 
 import android.util.Log;
-import io.paperdb.Paper;
-import io.realm.Realm;
 import rx.Observable;
 import rx.Subscriber;
-import rx.functions.Action1;
-import rx.functions.Func0;
 import rx.functions.Func1;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * Created by wangzhijie on 2015/10/28.
  */
 public class CacheHelper {
-    private final static class Block {
-        public Block(boolean started) {
-            this.started = started;
-        }
 
-        public boolean started = false;
-    }
-
-    private static final Map<String, Block> blocks = new HashMap<String, Block>();
-    private static final Map<String, CountDownLatch> latches = new HashMap<String, CountDownLatch>();
-
-    public static Observable getCachedMethod(final Observable originObservable, final String methodSignature,
-                                             final boolean needMemoryCache, final long memTime,
-                                             final boolean needDiskCache, final long diskTime) {
-        return Observable.concat(getInMemCache(methodSignature, needMemoryCache, memTime),
-                getInDiskCache(methodSignature, needDiskCache, diskTime, needMemoryCache),
-                getCheckBeforeOrigin(originObservable, methodSignature, needMemoryCache, memTime, needDiskCache, diskTime))
-                .filter(new Func1() {
-                    @Override
-                    public Object call(Object o) {
-                        return o != null;
-                    }
-                })
-                .first();
-        /*return Observable.just(null)
-                .map(new Func1() {
-                    @Override
-                    public Object call(Object o) {
-                        return getCachedMethodSync(new Fun1() {
-                            @Override
-                            public Object func() {
-                                final Object[] returnObj = {null};
-                                final CountDownLatch latch = new CountDownLatch(1);
-                                originObservable.subscribe(new Action1() {
-                                    @Override
-                                    public void call(Object o) {
-                                        returnObj[0] = o;
-                                        latch.countDown();
-                                    }
-                                });
-                                try {
-                                    latch.await();
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-                                return returnObj[0];
-                            }
-                        }, methodSignature, needMemoryCache, memTime, needDiskCache, diskTime);
-                    }
-                });*/
-    }
-
-    private static Observable getCheckBeforeOrigin(final Observable originObservable, final String methodSignature,
-                                                   final boolean needMemoryCache, final long memTime,
-                                                   final boolean needDiskCache, final long diskTime) {
-        return Observable.concat(Observable.just(null)
-                        .map(new Func1() {
-                            @Override
-                            public Object call(Object nil) {
-                                // block thread  wait until the first request finished
-                                final CountDownLatch latch;
-                                synchronized (CacheHelper.class) {
-                                    if (!latches.containsKey(methodSignature)) {
-                                        latch = new CountDownLatch(1);
-                                        latches.put(methodSignature, latch);
-                                    } else {
-                                        latch = latches.get(methodSignature);
-                                        try {
-                                            latch.await();
-                                        } catch (InterruptedException e) {
-                                            e.printStackTrace();
-                                        }
-                                    }
-                                }
-                                return null;
-                            }
-                        }), getInMemCache(methodSignature, needMemoryCache, memTime), getInDiskCache(methodSignature, needDiskCache, diskTime, needMemoryCache),
-                getFromOriginThenMakeCache(originObservable, methodSignature, needMemoryCache, memTime, needDiskCache, diskTime))
-                .filter(new Func1() {
-                    @Override
-                    public Object call(Object o) {
-                        return o != null;
-                    }
-                })
-                .first();
-    }
-
-    private static Observable<Object> getInMemCache(final String methodSignature, final boolean needMemoryCache, final long memTime) {
-        return Observable.create(new Observable.OnSubscribe<Object>() {
+    public static <T> Observable<T> getCachedMethod(Observable<T> originOb, final String key, final long timeout) {
+        return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
-            public void call(Subscriber<? super Object> subscriber) {
-                if (!needMemoryCache) {
-                    subscriber.onCompleted();
+            public void call(Subscriber<? super T> subscriber) {
+                Object obj = MemoryCacheManager.INSTANCE.get(key);
+                if (obj != null) {
+                    cacheLog("get object from memory cache: " + key + " => " + obj);
+                    subscriber.onNext((T) obj);
                     return;
                 }
-
-                final DefaultCacheMemoryHolder memoryRepo = DefaultCacheMemoryHolder.INSTANCE;
-                Object objCachedInMemory = memoryRepo.get(methodSignature);
-                if (objCachedInMemory != null) {
-                    long outTime = memoryRepo.getTimeOut(methodSignature);
-                    if (outTime > System.currentTimeMillis() || outTime <= 0) {
-                        cacheLog(" hit in memory cache key:" + methodSignature + "  so return object:" + objCachedInMemory);
-                        subscriber.onNext(objCachedInMemory);
-                        return;
-                        // return objCachedInMemory;
-                    } else {
-                        cacheLog(" key:" + methodSignature + " in memory is out of time");
-                    }
-                } else {
-                    cacheLog(" key:" + methodSignature + " in memory is missed or out of time");
-                }
+                cacheLog("not in memory cache: " + key);
                 subscriber.onCompleted();
             }
-        });
-    }
-
-
-    private static Observable getFromOriginThenMakeCache(final Observable originObservable, final String methodSignature,
-                                                         final boolean needMemoryCache, final long memTime,
-                                                         final boolean needDiskCache, final long diskTime) {
-
-        return originObservable.map(new Func1() {
+        }).concatWith(originOb.map(new Func1<T, T>() {
             @Override
-            public Object call(Object o) {
-                // save to mem
-                if (o != null && needMemoryCache) {
-                    final DefaultCacheMemoryHolder memoryRepo = DefaultCacheMemoryHolder.INSTANCE;
-                    memoryRepo.put(methodSignature, o, memTime > 0 ? memTime + System.currentTimeMillis() : Long.MAX_VALUE, 0);
-                    cacheLog(" got new object save to memory cache key:" + methodSignature + "  object:" + o);
-                }
-                // save to disk
-                if (o != null && needDiskCache) {
-                    Realm realm = Realm.getInstance(CacheUtil.getApplicationContext());
-                    //CacheObject cacheObject = new CacheObject();
-                    realm.beginTransaction();
-                    CacheInfo info;
-                    info = realm.where(CacheInfo.class).equalTo("key", methodSignature).findFirst();
-                    if (info == null) {
-                        info = realm.createObject(CacheInfo.class);
-                        info.setKey(methodSignature);
-                        String guid = UUID.randomUUID().toString();
-                        info.setObjGuid(guid);
-                    }
-                    info.setEditTime(System.currentTimeMillis());
-                    info.setExpTime(diskTime > 0 ? diskTime + System.currentTimeMillis() : Long.MAX_VALUE);
-                    Paper.put(info.getObjGuid(), o);
-                    realm.commitTransaction();
-                    cacheLog(" got new object save to database cache key:" + methodSignature + "  object:" + o);
-                }
-
-                // allow other thread to get cache or request
-                final CountDownLatch latch;
-                synchronized (CacheHelper.class) {
-                    if (latches.containsKey(methodSignature)) {
-                        latch = latches.get(methodSignature);
-                        latches.remove(methodSignature);
-                        latch.countDown();
-                    }
-                }
-                return o;
+            public T call(T t) {
+                MemoryCacheManager.INSTANCE.put(key, timeout, t);
+                return t;
             }
-        });
-
-
-    }
-
-    private static Observable<Object> getInDiskCache(final String methodSignature, final boolean needDiskCache, final long diskTime, final boolean needMemoryCache) {
-        return Observable.create(new Observable.OnSubscribe<Object>() {
+        })).filter(new Func1<T, Boolean>() {
             @Override
-            public void call(Subscriber<? super Object> subscriber) {
-                if (!needDiskCache || CacheUtil.getApplicationContext() == null) {
-                    subscriber.onCompleted();
-                    return;
-                }
-                final long now = System.currentTimeMillis();
-                Realm realm = null;
-                if (CacheUtil.getApplicationContext() != null) {
-                    realm = Realm.getInstance(CacheUtil.getApplicationContext());
-                }
-                CacheInfo cacheInfo = null;
-                if (realm != null) {
-                    cacheInfo = realm.where(CacheInfo.class)
-                            .equalTo("key", methodSignature)
-                            .greaterThan("expTime", now)
-                            .findFirst();
-                }
-                if (cacheInfo != null && Paper.exist(cacheInfo.getObjGuid())) {
-                    Object objFromDb = Paper.get(cacheInfo.getObjGuid());
-                    cacheLog(" hit in database cache key:" + methodSignature + "  so return object:" + objFromDb);
-                    realm.close();
-                    if (needMemoryCache) {
-                        final DefaultCacheMemoryHolder memoryRepo = DefaultCacheMemoryHolder.INSTANCE;
-                        memoryRepo.put(methodSignature, objFromDb, cacheInfo.getExpTime(), 0);
-                        cacheLog(" hit in database cache key:" + methodSignature + "  so save to memory object:" + 0);
-                    }
-                    subscriber.onNext(objFromDb);
-                    return;
-                } else {
-                    cacheLog(" key:" + methodSignature + " in database is missed");
-                }
-                subscriber.onCompleted();
+            public Boolean call(T t) {
+                return t != null;
             }
-        });
-    }
-
-
-    public interface Fun1 {
-        Object func();
-    }
-
-    public static Object getCachedMethodSync(final Fun1 originFunction, String methodSignature,
-                                             final boolean needMemoryCache, final long memTime,
-                                             boolean needDiskCache, final long diskTime) {
-        if (originFunction == null || (!needMemoryCache && !needDiskCache)) {
-            logWarn("originObservable cannot be null or needMemoryCache or needDiskCache");
-            return null;
-        }
-        if (needDiskCache && CacheUtil.getApplicationContext() == null) {
-            needDiskCache = false;
-            logWarn("!!!Cannot init database caused no Context. Please call CacheUtil.setApplicationContext(this); in onCreate().");
-        }
-        final DefaultCacheMemoryHolder memoryRepo = DefaultCacheMemoryHolder.INSTANCE;
-        final String key = methodSignature;
-        Object objCachedInMemory = memoryRepo.get(key);
-        if (needMemoryCache && objCachedInMemory != null) {
-            long outTime = memoryRepo.getTimeOut(key);
-            if (outTime > System.currentTimeMillis() || outTime <= 0) {
-                cacheLog(" hit in memory cache key:" + key + "  so return object:" + objCachedInMemory);
-                return objCachedInMemory;
-            } else {
-                cacheLog(" key:" + key + " in memory is out of time");
-            }
-        } else {
-            cacheLog(" key:" + key + " in memory is missed or out of time");
-        }
-
-        final boolean finalNeedDiskCache = needDiskCache;
-        final long now = System.currentTimeMillis();
-        Realm realm = null;
-        if (CacheUtil.getApplicationContext() != null) {
-            realm = Realm.getInstance(CacheUtil.getApplicationContext());
-        }
-        CacheInfo cacheInfo = null;
-        if (realm != null) {
-            cacheInfo = realm.where(CacheInfo.class)
-                    .equalTo("key", key)
-                    .greaterThan("expTime", now)
-                    .findFirst();
-        }
-        if (finalNeedDiskCache) {
-            if (cacheInfo != null && Paper.exist(cacheInfo.getObjGuid())) {
-                Object objFromDb = Paper.get(cacheInfo.getObjGuid());
-                if (needMemoryCache) {
-                    memoryRepo.put(key, objFromDb, cacheInfo.getExpTime(), 0);
-                    cacheLog(" hit in database cache key:" + key + "  so save to memory object:" + objFromDb);
-                }
-                cacheLog(" hit in database cache key:" + key + "  so return object:" + objFromDb);
-                realm.close();
-                return objFromDb;
-            } else {
-                cacheLog(" key:" + key + " in database is missed");
-            }
-        }
-        final Block block;
-        synchronized (CacheHelper.class) {
-            if (!blocks.containsKey(key)) {
-                block = new Block(false);
-                blocks.put(key, block);
-            } else {
-                block = blocks.get(key);
-            }
-        }
-        final Object[] newResponse = new Object[1];
-        synchronized (block) {
-            Object cachedValueAfterBlock = memoryRepo.get(key);
-            if (needMemoryCache && cachedValueAfterBlock != null) {
-                if (memoryRepo.getTimeOut(key) > now) {
-                    cacheLog(" hit in blocked memory cache key:" + key + "  so return object:" + cachedValueAfterBlock);
-                    return cachedValueAfterBlock;
-                }
-                //Log.d(cachedValueAfterBlock + "", " after newRequestStarted return cached key:" + key + " value" + cachedValueAfterBlock);
-            }
-            if (realm != null) {
-                realm.refresh();
-                cacheInfo = realm.where(CacheInfo.class)
-                        .equalTo("key", key)
-                        .greaterThan("expTime", now)
-                        .findFirst();
-            }
-
-
-            if (finalNeedDiskCache && cacheInfo != null && Paper.exist(cacheInfo.getObjGuid())) {
-                Object objFromDb = Paper.get(cacheInfo.getObjGuid());
-                if (needMemoryCache) {
-                    memoryRepo.put(key, objFromDb, cacheInfo.getExpTime(), 0);
-                    cacheLog(" hit in database cache key:" + key + "  so save to memory object:" + objFromDb);
-                }
-                cacheLog(" hit in blocked database cache key:" + key + "  so return object:" + cachedValueAfterBlock);
-                realm.close();
-                return objFromDb;
-            }
-
-            Object o = originFunction.func();
-            //                      Log.d("bruce", "2 thread = " + Thread.currentThread().getName());
-            newResponse[0] = o;
-            if (o != null && needMemoryCache) {
-                memoryRepo.put(key, o, memTime > 0 ? memTime + System.currentTimeMillis() : Long.MAX_VALUE, 0);
-                cacheLog(" got new object save to memory cache key:" + key + "  object:" + o);
-            }
-            if (o != null && finalNeedDiskCache) {
-
-                //CacheObject cacheObject = new CacheObject();
-                if (realm == null) {
-                    realm = Realm.getInstance(CacheUtil.getApplicationContext());
-                }
-                realm.beginTransaction();
-                CacheInfo info;
-                info = realm.where(CacheInfo.class).equalTo("key", key).findFirst();
-                if (info == null) {
-                    info = realm.createObject(CacheInfo.class);
-                    info.setKey(key);
-                    String guid = UUID.randomUUID().toString();
-                    info.setObjGuid(guid);
-                }
-                info.setEditTime(now);
-                info.setExpTime(diskTime > 0 ? diskTime + System.currentTimeMillis() : Long.MAX_VALUE);
-                Paper.put(info.getObjGuid(), o);
-                realm.commitTransaction();
-                cacheLog(" got new object save to database cache key:" + key + "  object:" + o);
-            }
-        }
-//                Log.d("bruce", "3 thread = " + Thread.currentThread().getName());
-        cacheLog(" got new object return it: " + key + " object:" + newResponse[0]);
-
-        if (realm != null) {
-            realm.close();
-        }
-        return newResponse[0];
+        }).first();
     }
 
     private static void cacheLog(String msg) {
