@@ -1,5 +1,6 @@
 package com.github.bluzwong.mycache;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -16,9 +17,14 @@ import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -35,6 +41,28 @@ public class MainActivity extends AppCompatActivity {
         CacheUtil.setNeedLog(true);
         WebApi.INSTANCE.init(this);
         initBtn();
+
+        if (savedInstanceState != null) {
+            long saveStartTime = System.currentTimeMillis();
+            List<String> datas = (List<String>) ByteToObject(savedInstanceState.getByteArray("ccf"));
+//            List<String> datas = savedInstanceState.getStringArrayList("ccf");
+            long endStartTime = System.currentTimeMillis();
+            Log.i("bruce", "[" + (endStartTime - saveStartTime)+"ms] save wsd @ " + datas.hashCode() + " => " + datas);
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        ArrayList<String> datas = new ArrayList<>();
+        for (int i = 0; i < 10000; i++) {
+            datas.add("string " + i);
+        }
+        long saveStartTime = System.currentTimeMillis();
+        outState.putByteArray("ccf", ObjectToByte(datas));
+//        outState.putStringArrayList("ccf", datas);
+        long endStartTime = System.currentTimeMillis();
+        super.onSaveInstanceState(outState);
+        Log.i("bruce", "[" + (endStartTime - saveStartTime)+"ms] save wsd @ " + datas.hashCode() + " => " + datas);
     }
 
     private void initBtn() {
@@ -106,5 +134,40 @@ public class MainActivity extends AppCompatActivity {
         void printUsingTime(String owner) {
             Log.i("httprequest", owner + " using time => " + getUsingTime() + " ms");
         }
+    }
+
+
+
+    public static Object ByteToObject(byte[] bytes){
+        java.lang.Object obj = null;
+        try{
+            ByteArrayInputStream bi = new ByteArrayInputStream(bytes);
+            ObjectInputStream oi = new ObjectInputStream(bi);
+            obj = oi.readObject();
+            bi.close();
+            oi.close();
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
+        return obj;
+    }
+
+    public static byte[] ObjectToByte(Object obj)
+    {
+        byte[] bytes = null;
+        try {
+            //object to bytearray
+            ByteArrayOutputStream bo = new ByteArrayOutputStream();
+            ObjectOutputStream oo = new ObjectOutputStream(bo);
+            oo.writeObject(obj);
+            bytes = bo.toByteArray();
+            bo.close();
+            oo.close();
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+        }
+        return bytes;
     }
 }
