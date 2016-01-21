@@ -37,4 +37,7 @@ public enum MemoryCacheManager {
         return null;
     }
 
+    public Map<String, CacheInfoObject> getMap() {
+        return cacheInfoObjectMap;
+    }
 }

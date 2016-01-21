@@ -1,8 +1,13 @@
 package com.github.bluzwong.mycache;
 
 import android.content.Context;
+import android.util.Log;
 import com.github.bluzwong.mycache_lib.CacheUtil;
+import com.github.bluzwong.mycache_lib.DefaultDiskCacheInterceptor;
 import com.github.bluzwong.mycache_lib.UrlTimeOutMap;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import retrofit2.GsonConverterFactory;
 import retrofit2.Retrofit;
 import retrofit2.RxJavaCallAdapterFactory;
@@ -11,6 +16,7 @@ import retrofit2.http.Query;
 import retrofit2.http.Url;
 import rx.Observable;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -54,9 +60,33 @@ public enum WebApi {
 
     public synchronized void init(Context context) {
         if (retrofit == null) {
+            OkHttpClient client = CacheUtil.myCacheClient(context, DefaultDiskCacheInterceptor.Builder(context)
+                    .setMap(map)
+                    .setShouldLoadCacheBeforeRequest(new DefaultDiskCacheInterceptor.ShouldLoadCacheBeforeRequest() {
+                        @Override
+                        public boolean shouldLoadCache(Request request) {
+                            if (request.url().toString().contains("value1=1")) {
+                                return false;
+                            }
+                            return true;
+                        }
+                    })
+                    .setShouldSaveCacheAfterResponse(new DefaultDiskCacheInterceptor.ShouldSaveCacheAfterResponse() {
+                        @Override
+                        public boolean shouldSaveCache(Response response) {
+                            try {
+                                Log.i("bruce", "body string => " + response.body().string());
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            return true;
+                        }
+                    })
+                    .build()
+            );
             retrofit = new Retrofit.Builder()
                     .baseUrl("http://mt58866.xicp.net:66/")
-                    .client(CacheUtil.myCacheClient(context.getApplicationContext(), map))
+                    .client(client)
                     .addConverterFactory(GsonConverterFactory.create())
                     .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
                     .build();

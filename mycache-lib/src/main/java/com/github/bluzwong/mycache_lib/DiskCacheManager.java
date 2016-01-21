@@ -8,8 +8,9 @@ import android.content.SharedPreferences;
  */
 public class DiskCacheManager implements ICacheManager {
     private SharedPreferences preferences;
+
     public DiskCacheManager(Context context) {
-        preferences = context.getSharedPreferences("my-cache-lib-disk", Context.MODE_PRIVATE);
+        preferences = CacheUtil.getDefaultDiskCacheSharedPreferences(context);
     }
 
     @Override

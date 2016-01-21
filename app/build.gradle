@@ -43,7 +43,7 @@ dependencies {
 //    compile project (':mycache-lib')
 //    apt project (':mycache-processor')
     apt 'com.github.bluzwong:mycache-processor:0.1.0'
-    compile ('com.github.bluzwong:mycache-lib:0.1.0@aar')// { transitive = true }
+    compile ('com.github.bluzwong:mycache-lib:0.1.1@aar')// { transitive = true }
 
 
 }

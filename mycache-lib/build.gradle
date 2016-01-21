@@ -22,4 +22,4 @@ dependencies {
     compile 'io.reactivex:rxjava:1.0.14'
     compile 'com.squareup.okhttp3:okhttp:3.0.0-RC1'
 }
-//apply from: 'push.gradle'
+apply from: 'push.gradle'

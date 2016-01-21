@@ -2,12 +2,14 @@ package com.github.bluzwong.mycache_lib;
 
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import okhttp3.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.util.Map;
 
 /**
  * Created by wangzhijie@wind-mobi.com on 2015/8/27.
@@ -24,6 +26,16 @@ public class CacheUtil {
         sNeedLog = needLog;
     }
 
+    // manual do with disk cache
+    public static SharedPreferences getDefaultDiskCacheSharedPreferences(Context context) {
+        return context.getSharedPreferences("my-cache-lib-disk", Context.MODE_PRIVATE);
+    }
+
+    // manual do with memory cache
+    public Map<String, CacheInfoObject> getDefaultMemoryMap() {
+        return MemoryCacheManager.INSTANCE.getMap();
+    }
+
     public static String getMethodName(Class clz, Method method) {
         String clzName = clz.getName();
         String methodName = method.getName();
@@ -32,6 +44,7 @@ public class CacheUtil {
 
     private static ICacheManager manager;
 
+    @Deprecated
     public static Interceptor myCacheInterceptor(Context context, final UrlTimeOutMap map) {
         if (manager == null) {
             manager = new DiskCacheManager(context);
@@ -76,10 +89,18 @@ public class CacheUtil {
         return new Cache(httpCacheDirectory, size);
     }
 
+    @Deprecated
     public static OkHttpClient myCacheClient(Context context, final UrlTimeOutMap map) {
         return new OkHttpClient.Builder()
                 .cache(myCacheCache(context, 10 * 1024 * 1024))
                 .addInterceptor(myCacheInterceptor(context, map))
+                .build();
+    }
+
+    public static OkHttpClient myCacheClient(Context context, DefaultDiskCacheInterceptor interceptor) {
+        return new OkHttpClient.Builder()
+                .cache(myCacheCache(context, 10 * 1024 * 1024))
+                .addInterceptor(interceptor)
                 .build();
     }
 }
