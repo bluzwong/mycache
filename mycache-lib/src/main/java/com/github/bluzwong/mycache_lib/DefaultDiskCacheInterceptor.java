@@ -44,6 +44,8 @@ public class DefaultDiskCacheInterceptor implements Interceptor {
         if (hasCached) {
             CacheHelper.cacheLog("requesting url => " + urlString + "\n may has cache, try cache");
             request = request.newBuilder().cacheControl(CacheControl.FORCE_CACHE).build();
+        } else {
+            CacheHelper.cacheLog("requesting url => " + urlString + "\n has not cache, so get from origin");
         }
 
         Response response = chain.proceed(request);
@@ -52,6 +54,8 @@ public class DefaultDiskCacheInterceptor implements Interceptor {
             // cache not exists, reload from origin
             CacheHelper.cacheLog("requesting url => " + urlString + "\n cache not exists, reload from origin");
             response = chain.proceed(originRequest);
+        } else {
+            CacheHelper.cacheLog("requesting url => " + urlString + "\n cache is exists, and not 504. success");
         }
         boolean shouldSave = true;
 
@@ -66,8 +70,12 @@ public class DefaultDiskCacheInterceptor implements Interceptor {
                 URL url = new URL(urlString);
                 timeOut = map.urlForMap(url, url.getAuthority(), url.getPath());
             }
-            CacheHelper.cacheLog("requesting url => " + urlString + "\n save to memory cache with timeout @ " + timeOut + "ms");
-            manager.put(urlString, timeOut);
+            if (timeOut > 0) {
+                CacheHelper.cacheLog("requesting url => " + urlString + "\n save to memory cache with timeout @ " + timeOut + "ms");
+                manager.put(urlString, timeOut);
+            } else {
+                CacheHelper.cacheLog("requesting url => " + urlString + "\n time out <= 0, do not make cache");
+            }
         }
         return response;
     }

@@ -21,15 +21,17 @@ public class DiskCacheManager implements ICacheManager {
         if (preferences == null) {
             return;
         }
-        long expireTime;
-        if (timeout <= 0) {
+        long expireTime = 0;
+        long now = System.currentTimeMillis();
+        if (timeout >= Long.MAX_VALUE - now) {
             expireTime = Long.MAX_VALUE;
-        } else {
-            long now = System.currentTimeMillis();
+        } else if (timeout > 0 ) {
             expireTime = now + timeout;
         }
 
-        preferences.edit().putLong(key, expireTime).apply();
+        if (expireTime > now) {
+            preferences.edit().putLong(key, expireTime).apply();
+        }
     }
 
     @Override
