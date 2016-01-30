@@ -38,11 +38,11 @@ dependencies {
 
     compile 'com.squareup.retrofit2:retrofit:2.0.0-beta3'
     compile 'com.squareup.retrofit2:converter-gson:2.0.0-beta3'
-    compile 'com.squareup.retrofit2:adapter-rxjava:2.0.0-beta3'
+//    compile 'com.squareup.retrofit2:adapter-rxjava:2.0.0-beta3'
 
 
 //    apt project (':mycache-processor')
 //    apt 'com.github.bluzwong:mycache-processor:0.1.0'
         compile project (':mycache-lib')
-//    compile ('com.github.bluzwong:mycache-lib:0.1.3@aar') { transitive = true }
+//    compile ('com.github.bluzwong:mycache-lib:0.1.4@aar') { transitive = true }
 }
