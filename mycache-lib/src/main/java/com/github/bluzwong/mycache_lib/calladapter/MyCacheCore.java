@@ -22,11 +22,9 @@ public class MyCacheCore implements CacheCore {
 
     private WillSave willSave;
     private WillLoad willLoad;
-    private Context context;
     private SharedPreferences preferences;
 
     public MyCacheCore(Context context, File diskDirectory, int memorySize, long maxDiskSize) {
-        this.context = context.getApplicationContext();
         try {
             diskCache = DiskLruCache.open(diskDirectory, 1, 1, maxDiskSize);
             preferences = context.getSharedPreferences(CACHE_NAME, Context.MODE_PRIVATE);
@@ -44,12 +42,14 @@ public class MyCacheCore implements CacheCore {
         return create(context, DEFAULT_MEMORY_CACHE_SIZE, DEFAULT_DISK_CACHE_SIZE);
     }
 
-    public void setWillSave(WillSave willSave) {
+    public MyCacheCore setWillSave(WillSave willSave) {
         this.willSave = willSave;
+        return this;
     }
 
-    public void setWillLoad(WillLoad willLoad) {
+    public MyCacheCore setWillLoad(WillLoad willLoad) {
         this.willLoad = willLoad;
+        return this;
     }
 
     @Override
@@ -80,14 +80,14 @@ public class MyCacheCore implements CacheCore {
     }
 
     @Override
-    public byte[] loadCache(String url) {
+    public byte[] loadCache(String url, long timeOut) {
         if (willLoad != null && !willLoad.shouldLoad(url)) { return null ;}
         long now = System.currentTimeMillis();
 
         String key = MyUtils.getMD5(url);
         TimeAndObject timeAndObject = memoryCache.get(key);
         if (timeAndObject != null && timeAndObject.object != null && timeAndObject.object.length > 0) {
-            if (timeAndObject.expireTime >= now) {
+            if (timeAndObject.expireTime >= now && timeAndObject.expireTime <= now + timeOut) {
                 // object exists and not timeout
                 return timeAndObject.object;
             } else {
@@ -103,8 +103,9 @@ public class MyCacheCore implements CacheCore {
         }
 
         long expireTime = preferences.getLong(key, CacheCore.NO_CACHE);
-        if (expireTime == CacheCore.NO_CACHE || expireTime <= 0 || expireTime < now) {
+        if (expireTime == CacheCore.NO_CACHE || expireTime <= 0 || expireTime < now || expireTime > now + timeOut) {
             // time out or no need to cache
+            removeKey(key);
             return null;
         }
         // not time out , try load from disk cache

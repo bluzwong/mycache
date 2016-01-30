@@ -27,8 +27,7 @@ import java.util.Map;
 /**
  * Created by wangzhijie on 2016/1/19.
  */
-public enum WebApi {
-    INSTANCE;
+public class WebApi {
 
     public interface MyService {
         @GET("/valueindex.php")
@@ -40,8 +39,8 @@ public enum WebApi {
         @GET
         Observable<Value2> getValue2(@Url String url);
 
-        @MyCache
         @GET
+        @MyCache(timeOut = 5000)
         Observable<Result> getResult(@Url String url, @Query("value1") String value1, @Query("value2") String value2);
     }
 

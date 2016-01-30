@@ -1,5 +1,7 @@
 package com.github.bluzwong.mycache_lib.calladapter;
 
+import android.util.Log;
+import com.github.bluzwong.mycache_lib.CacheUtil;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
@@ -123,5 +125,28 @@ public class MyUtils {
             buf.append(Integer.toHexString(i));
         }
         return buf.toString();
+    }
+
+
+    static void cacheLog(String msg) {
+        cacheLog(msg, -1);
+    }
+
+    static void logWarn(String msg) {
+        if (CacheUtil.isNeedLog()) {
+            Log.w("mycache", msg);
+        }
+    }
+
+    static void cacheLog(String msg, long startTime) {
+        if (CacheUtil.isNeedLog()) {
+            if (startTime > 0) {
+                long t = System.currentTimeMillis() - startTime;
+                msg = "[" + t + "ms] " + msg;
+                Log.i("mycache", msg);
+            } else {
+                Log.d("mycache", msg);
+            }
+        }
     }
 }

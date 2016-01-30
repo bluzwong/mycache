@@ -14,11 +14,10 @@ import rx.subscriptions.Subscriptions;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by bluzwong on 2016/1/30.
@@ -196,6 +195,15 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
             this.timeOut = timeOut;
         }
 
+        private void removeFromLatches(String url) {
+            if (latches.containsKey(url)) {
+                CountDownLatch latch = latches.get(url);
+                if (latch != null) {
+                    latch.countDown();
+                }
+                latches.remove(url);
+            }
+        }
         @Override
         public Type responseType() {
             return responseType;
@@ -203,34 +211,36 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
 
         @Override
         public <R> Observable<R> adapt(Call<R> call) {
-
+            Request request = MyUtils.buildRequestFromCall(call);
+            final String url = request.url().toString();
+            MyUtils.cacheLog("this requesting url => " + url);
             final Observable<R> realRequestObservable = Observable.create(new CallOnSubscribe<>(call)) //
                     .flatMap(new Func1<Response<R>, Observable<R>>() {
                         @Override
                         public Observable<R> call(Response<R> response) {
+
                             if (response.isSuccess()) {
                                 return Observable.just(response.body());
                             }
+                            MyUtils.cacheLog("response error @@@ requesting end remove latch from map => " + url);
+                            removeFromLatches(url);
                             return Observable.error(new HttpException(response));
                         }
                     });
 
-            Request request = MyUtils.buildRequestFromCall(call);
-            if (request == null) {
-                return realRequestObservable;
-            }
-
-            final String url = request.url().toString();
 
             Observable<R> realRequestObservableAndLatch = Observable.create(new Observable.OnSubscribe<R>() {
                 @Override
                 public void call(Subscriber<? super R> subscriber) {
-                    if (latches.containsKey(url)) {
-                        subscriber.onCompleted();
-                        return;
+                    if (!latches.containsKey(url)) {
+                        MyUtils.cacheLog("before real request put latch to map => " + url);
+                        CountDownLatch countDownLatch = new CountDownLatch(1);
+                        latches.put(url, countDownLatch);
+                    } else {
+                        MyUtils.cacheLog("before real request latch exists => " + url);
                     }
-                    CountDownLatch countDownLatch = new CountDownLatch(1);
-                    latches.put(url, countDownLatch);
+                    subscriber.onNext(null);
+                    subscriber.onCompleted();
                 }
             }).flatMap(new Func1<R, Observable<R>>() {
                 @Override
@@ -240,80 +250,90 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
             }).doOnNext(new Action1<R>() {
                 @Override
                 public void call(R r) {
-                    if (latches.containsKey(url)) {
-                        CountDownLatch latch = latches.get(url);
-                        if (latch != null) {
-                            latch.countDown();
-                        }
-                        latches.remove(url);
+                    byte[] rawResponse = MyUtils.getRawResponseFromEntity(r, retrofit, responseType, annotations);
+                    if (rawResponse == null || rawResponse.length <= 0) {
+                        MyUtils.cacheLog("WARN! raw response is empty");
+                        MyUtils.cacheLog("response is empty WARN @@@ requesting end remove latch from map => " + url);
+                        removeFromLatches(url);
+                        return;
                     }
+                    MyUtils.cacheLog("try save cache ,then requesting end remove latch from map => " + url);
+                    cacheCore.saveCache(url, rawResponse, timeOut);
+                    removeFromLatches(url);
                 }
             });
 
-            Observable<R> waitForRequest = Observable.create(new Observable.OnSubscribe<R>() {
+            Observable<Boolean> waitForRequest = Observable.create(new Observable.OnSubscribe<Boolean>() {
                 @Override
-                public void call(Subscriber<? super R> subscriber) {
+                public void call(Subscriber<? super Boolean> subscriber) {
                     CountDownLatch latch = latches.get(url);
                     if (latch == null) {
                         // is not requesting
+                        MyUtils.cacheLog("no latch no wait => " + url);
+                        // do not need load from cache
+                        subscriber.onNext(false);
                         subscriber.onCompleted();
                         return;
                     }
-                    // TODO: 2016/1/30
-                    /*
                     try {
                         // wait for request finish
-
-                        latch.await();
+                        MyUtils.cacheLog("latch await until request complete => " + url);
+                        latch.await(10, TimeUnit.SECONDS);
                         // request finished
                     } catch (InterruptedException e) {
                         e.printStackTrace();
-                    }*/
+                    }
+                    MyUtils.cacheLog("latch await down go next => " + url);
+                    // try from cache
+                    subscriber.onNext(true);
                     subscriber.onCompleted();
                 }
+
+
             });
 
             final Observable<R> tryLoadCache = Observable.create(new Observable.OnSubscribe<R>() {
                 @Override
                 public void call(Subscriber<? super R> subscriber) {
-                    byte[] bytesFromCache = cacheCore.loadCache(url);
+                    MyUtils.cacheLog("try load from cache => " + url);
+                    byte[] bytesFromCache = cacheCore.loadCache(url, timeOut);
                     if (bytesFromCache != null && bytesFromCache.length > 0) {
                         R entityFromResponse = MyUtils.getEntityFromResponse(bytesFromCache, retrofit, responseType, annotations);
                         if (entityFromResponse != null) {
+                            MyUtils.cacheLog("hit cache => " + url);
                             subscriber.onNext(entityFromResponse);
                         }
+                    } else {
+                        MyUtils.cacheLog("not cached => " + url);
                     }
                     subscriber.onCompleted();
                 }
             });
 
-            Observable<R> tryWaitAndGetCacheOrRequest = waitForRequest.flatMap(new Func1<R, Observable<R>>() {
+            Observable<R> tryWaitAndGetCacheOrRequest = waitForRequest.flatMap(new Func1<Boolean, Observable<R>>() {
                 @Override
-                public Observable<R> call(R r) {
-                    return tryLoadCache.subscribeOn(Schedulers.io());
-                }
-            }).concatWith(realRequestObservable.subscribeOn(Schedulers.io()).observeOn(Schedulers.io()).doOnNext(new Action1<R>() {
-                @Override
-                public void call(R r) {
-                    byte[] rawResponse = MyUtils.getRawResponseFromEntity(r, retrofit, responseType, annotations);
-                    if (rawResponse == null || rawResponse.length <= 0) {
-                        return;
+                public Observable<R> call(Boolean needFromCache) {
+                    if (needFromCache) {
+                        return tryLoadCache.subscribeOn(Schedulers.io());
                     }
-                    cacheCore.saveCache(url, rawResponse, timeOut);
+                    return Observable.empty();
                 }
-            })).filter(new Func1<R, Boolean>() {
-                @Override
-                public Boolean call(R r) {
-                    return r != null;
-                }
-            }).first();
+            }).concatWith(realRequestObservableAndLatch.subscribeOn(Schedulers.io()).observeOn(Schedulers.io()))
+                    .filter(new Func1<R, Boolean>() {
+                        @Override
+                        public Boolean call(R r) {
+                            return r != null;
+                        }
+                    }).first();
 
-            return tryLoadCache.concatWith(tryWaitAndGetCacheOrRequest.subscribeOn(Schedulers.io())).filter(new Func1<R, Boolean>() {
-                @Override
-                public Boolean call(R r) {
-                    return r != null;
-                }
-            }).first();
+
+            return tryLoadCache.concatWith(tryWaitAndGetCacheOrRequest.subscribeOn(Schedulers.io()))
+                    .filter(new Func1<R, Boolean>() {
+                        @Override
+                        public Boolean call(R r) {
+                            return r != null;
+                        }
+                    }).first();
         }
     }
 
@@ -347,4 +367,3 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
         }
     }
 }
-

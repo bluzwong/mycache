@@ -8,5 +8,5 @@ public interface CacheCore {
     long ALWAYS_CACHE = Long.MAX_VALUE;
 
     void saveCache(String url, byte[] rawResponse, long timeOut);
-    byte[] loadCache(String url);
+    byte[] loadCache(String url, long timeOut);
 }
