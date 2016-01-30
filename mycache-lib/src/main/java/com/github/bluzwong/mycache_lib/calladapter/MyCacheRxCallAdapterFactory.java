@@ -1,9 +1,6 @@
 package com.github.bluzwong.mycache_lib.calladapter;
 
 import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.ResponseBody;
-import okio.Buffer;
 import retrofit2.*;
 import rx.Observable;
 import rx.Subscriber;
@@ -14,10 +11,14 @@ import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 import rx.subscriptions.Subscriptions;
 
-import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Created by bluzwong on 2016/1/30.
@@ -185,7 +186,7 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
         private CacheCore cacheCore;
         private Annotation[] annotations;
         private long timeOut;
-
+        private Map<String, CountDownLatch> latches = new HashMap<>();
         SimpleCacheCallAdapter(Retrofit retrofit, Type responseType, CacheCore cacheCore, Annotation[] annotations, long timeOut) {
             this.retrofit = retrofit;
             this.responseType = responseType;
@@ -201,8 +202,6 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
 
         @Override
         public <R> Observable<R> adapt(Call<R> call) {
-            Request request = MyUtils.buildRequestFromCall(call);
-            final String url = request.url().toString();
 
             Observable<R> realRequestObservable = Observable.create(new CallOnSubscribe<>(call)) //
                     .flatMap(new Func1<Response<R>, Observable<R>>() {
@@ -215,39 +214,93 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
                         }
                     });
 
-            return Observable.create(new Observable.OnSubscribe<R>() {
+            Request request = MyUtils.buildRequestFromCall(call);
+            if (request == null) {
+                return realRequestObservable;
+            }
+
+            final String url = request.url().toString();
+
+            Observable<R> realRequestObservableAndLatch = Observable.create(new Observable.OnSubscribe<R>() {
+                @Override
+                public void call(Subscriber<? super R> subscriber) {
+                    if (latches.containsKey(url)) {
+                        subscriber.onCompleted();
+                        return;
+                    }
+                    CountDownLatch countDownLatch = new CountDownLatch(1);
+                    latches.put(url, countDownLatch);
+                }
+            }).concatWith(realRequestObservable.subscribeOn(Schedulers.io()))
+                    .doOnNext(new Action1<R>() {
+                        @Override
+                        public void call(R r) {
+                            if (latches.containsKey(url)) {
+                                CountDownLatch latch = latches.get(url);
+                                if (latch != null) {
+                                    latch.countDown();
+                                }
+                                latches.remove(url);
+                            }
+                        }
+                    });
+
+            Observable<R> waitForRequest = Observable.create(new Observable.OnSubscribe<R>() {
+                @Override
+                public void call(Subscriber<? super R> subscriber) {
+                    CountDownLatch latch = latches.get(url);
+                    if (latch == null) {
+                        // is not requesting
+                        subscriber.onCompleted();
+                        return;
+                    }
+                    try {
+                        // wait for request finish
+                        latch.await();
+                        // request finished
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    subscriber.onCompleted();
+                }
+            });
+
+            final Observable<R> tryLoadCache = Observable.create(new Observable.OnSubscribe<R>() {
                 @Override
                 public void call(Subscriber<? super R> subscriber) {
                     byte[] bytesFromCache = cacheCore.loadCache(url);
                     if (bytesFromCache != null && bytesFromCache.length > 0) {
-                        Converter<ResponseBody, Object> converter = MyUtils.getResponseConverter(retrofit, responseType, annotations);
-                        try {
-                            R responseObject = (R) converter.convert(ResponseBody.create(null, bytesFromCache));
-                            if (subscriber.isUnsubscribed()) return;
-                            if (responseObject != null) {
-                                subscriber.onNext(responseObject);
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                        R entityFromResponse = MyUtils.getEntityFromResponse(bytesFromCache, retrofit, responseType, annotations);
+                        if (entityFromResponse != null) {
+                            subscriber.onNext(entityFromResponse);
                         }
                     }
                     subscriber.onCompleted();
                 }
-            }).concatWith(realRequestObservable.observeOn(Schedulers.io()).doOnNext(new Action1<R>() {
+            });
+
+            Observable<R> tryWaitAndGetCacheOrRequest = waitForRequest.flatMap(new Func1<R, Observable<R>>() {
+                @Override
+                public Observable<R> call(R r) {
+                    return tryLoadCache.subscribeOn(Schedulers.io());
+                }
+            }).concatWith(realRequestObservableAndLatch.subscribeOn(Schedulers.io()).observeOn(Schedulers.io()).doOnNext(new Action1<R>() {
                 @Override
                 public void call(R r) {
-                    Converter<Object, RequestBody> converter = MyUtils.getRequestConverter(retrofit, responseType, annotations);
-                    try {
-                        RequestBody requestBody = converter.convert(r);
-                        Buffer buffer = new Buffer();
-                        requestBody.writeTo(buffer);
-                        byte[] responseToCache = buffer.readByteArray();
-                        cacheCore.saveCache(url, responseToCache, timeOut);
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    byte[] rawResponse = MyUtils.getRawResponseFromEntity(r, retrofit, responseType, annotations);
+                    if (rawResponse == null || rawResponse.length <= 0) {
+                        return;
                     }
+                    cacheCore.saveCache(url, rawResponse, timeOut);
                 }
             })).filter(new Func1<R, Boolean>() {
+                @Override
+                public Boolean call(R r) {
+                    return r != null;
+                }
+            }).first();
+
+            return tryLoadCache.concatWith(tryWaitAndGetCacheOrRequest.subscribeOn(Schedulers.io())).filter(new Func1<R, Boolean>() {
                 @Override
                 public Boolean call(R r) {
                     return r != null;

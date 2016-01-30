@@ -3,10 +3,12 @@ package com.github.bluzwong.mycache_lib.calladapter;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.ResponseBody;
+import okio.Buffer;
 import retrofit2.Call;
 import retrofit2.Converter;
 import retrofit2.Retrofit;
 
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -34,7 +36,7 @@ public class MyUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> Converter<ResponseBody, T> getResponseConverter(Retrofit retrofit, Type dataType, Annotation[] annotations) {
+    static <T> Converter<ResponseBody, T> getResponseConverter(Retrofit retrofit, Type dataType, Annotation[] annotations) {
         for(Converter.Factory factory : retrofit.converterFactories()) {
             if (factory == null) continue;
             Converter<ResponseBody, T> converter =
@@ -48,7 +50,7 @@ public class MyUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> Converter<T, RequestBody> getRequestConverter(Retrofit retrofit, Type dataType, Annotation[] annotations) {
+    static <T> Converter<T, RequestBody> getRequestConverter(Retrofit retrofit, Type dataType, Annotation[] annotations) {
         for(Converter.Factory factory : retrofit.converterFactories()){
             if(factory == null) continue;
             Converter<T, RequestBody> converter =
@@ -60,4 +62,33 @@ public class MyUtils {
         }
         return null;
     }
+    static<T> byte[] getRawResponseFromEntity(T t, Retrofit retrofit, Type dataType, Annotation[] annotations) {
+        Converter<T, RequestBody> converter = getRequestConverter(retrofit, dataType, annotations);
+        if (converter == null) {
+            return null;
+        }
+        try {
+            RequestBody requestBody = converter.convert(t);
+            Buffer buffer = new Buffer();
+            requestBody.writeTo(buffer);
+            return buffer.readByteArray();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    static <T> T getEntityFromResponse(byte[] rawResponse, Retrofit retrofit, Type dataType, Annotation[] annotations) {
+        Converter<ResponseBody, T> converter = getResponseConverter(retrofit, dataType, annotations);
+        if (converter == null) {
+            return null;
+        }
+        try {
+            return converter.convert(ResponseBody.create(null, rawResponse));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
 }
