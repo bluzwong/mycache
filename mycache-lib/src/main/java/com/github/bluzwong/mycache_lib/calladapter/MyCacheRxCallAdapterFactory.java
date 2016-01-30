@@ -187,6 +187,7 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
         private Annotation[] annotations;
         private long timeOut;
         private Map<String, CountDownLatch> latches = new HashMap<>();
+
         SimpleCacheCallAdapter(Retrofit retrofit, Type responseType, CacheCore cacheCore, Annotation[] annotations, long timeOut) {
             this.retrofit = retrofit;
             this.responseType = responseType;
@@ -203,7 +204,7 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
         @Override
         public <R> Observable<R> adapt(Call<R> call) {
 
-            Observable<R> realRequestObservable = Observable.create(new CallOnSubscribe<>(call)) //
+            final Observable<R> realRequestObservable = Observable.create(new CallOnSubscribe<>(call)) //
                     .flatMap(new Func1<Response<R>, Observable<R>>() {
                         @Override
                         public Observable<R> call(Response<R> response) {
@@ -231,19 +232,23 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
                     CountDownLatch countDownLatch = new CountDownLatch(1);
                     latches.put(url, countDownLatch);
                 }
-            }).concatWith(realRequestObservable.subscribeOn(Schedulers.io()))
-                    .doOnNext(new Action1<R>() {
-                        @Override
-                        public void call(R r) {
-                            if (latches.containsKey(url)) {
-                                CountDownLatch latch = latches.get(url);
-                                if (latch != null) {
-                                    latch.countDown();
-                                }
-                                latches.remove(url);
-                            }
+            }).flatMap(new Func1<R, Observable<R>>() {
+                @Override
+                public Observable<R> call(R r) {
+                    return realRequestObservable.subscribeOn(Schedulers.io());
+                }
+            }).doOnNext(new Action1<R>() {
+                @Override
+                public void call(R r) {
+                    if (latches.containsKey(url)) {
+                        CountDownLatch latch = latches.get(url);
+                        if (latch != null) {
+                            latch.countDown();
                         }
-                    });
+                        latches.remove(url);
+                    }
+                }
+            });
 
             Observable<R> waitForRequest = Observable.create(new Observable.OnSubscribe<R>() {
                 @Override
@@ -254,13 +259,16 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
                         subscriber.onCompleted();
                         return;
                     }
+                    // TODO: 2016/1/30
+                    /*
                     try {
                         // wait for request finish
+
                         latch.await();
                         // request finished
                     } catch (InterruptedException e) {
                         e.printStackTrace();
-                    }
+                    }*/
                     subscriber.onCompleted();
                 }
             });
@@ -284,7 +292,7 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
                 public Observable<R> call(R r) {
                     return tryLoadCache.subscribeOn(Schedulers.io());
                 }
-            }).concatWith(realRequestObservableAndLatch.subscribeOn(Schedulers.io()).observeOn(Schedulers.io()).doOnNext(new Action1<R>() {
+            }).concatWith(realRequestObservable.subscribeOn(Schedulers.io()).observeOn(Schedulers.io()).doOnNext(new Action1<R>() {
                 @Override
                 public void call(R r) {
                     byte[] rawResponse = MyUtils.getRawResponseFromEntity(r, retrofit, responseType, annotations);

@@ -64,12 +64,14 @@ public class MyCacheCore implements CacheCore {
         if (timeOut == Long.MAX_VALUE || timeOut == CacheCore.ALWAYS_CACHE) {
             expireTime = Long.MAX_VALUE;
         }
-        memoryCache.put(url, new TimeAndObject(expireTime, rawResponse));
+        String key = MyUtils.getMD5(url);
+
+        memoryCache.put(key, new TimeAndObject(expireTime, rawResponse));
         if (diskCache == null) { return; }
 
-        preferences.edit().putLong(url, expireTime).apply();
+        preferences.edit().putLong(key, expireTime).apply();
         try {
-            DiskLruCache.Editor editor = diskCache.edit(url);
+            DiskLruCache.Editor editor = diskCache.edit(key);
             editor.set(0, new String(rawResponse, "UTF-8"));
             editor.commit();
         } catch (IOException e) {
@@ -82,14 +84,15 @@ public class MyCacheCore implements CacheCore {
         if (willLoad != null && !willLoad.shouldLoad(url)) { return null ;}
         long now = System.currentTimeMillis();
 
-        TimeAndObject timeAndObject = memoryCache.get(url);
+        String key = MyUtils.getMD5(url);
+        TimeAndObject timeAndObject = memoryCache.get(key);
         if (timeAndObject != null && timeAndObject.object != null && timeAndObject.object.length > 0) {
             if (timeAndObject.expireTime >= now) {
                 // object exists and not timeout
                 return timeAndObject.object;
             } else {
                 // objects exists but is timeout
-                removeKey(url);
+                removeKey(key);
                 return null;
             }
         }
@@ -99,14 +102,14 @@ public class MyCacheCore implements CacheCore {
             return null;
         }
 
-        long expireTime = preferences.getLong(url, CacheCore.NO_CACHE);
+        long expireTime = preferences.getLong(key, CacheCore.NO_CACHE);
         if (expireTime == CacheCore.NO_CACHE || expireTime <= 0 || expireTime < now) {
             // time out or no need to cache
             return null;
         }
         // not time out , try load from disk cache
         try {
-            String stringObject = diskCache.get(url).getString(0);
+            String stringObject = diskCache.get(key).getString(0);
             if (stringObject == null || stringObject.equals("")) {
                 // not in disk cache
                 return null;
@@ -114,7 +117,7 @@ public class MyCacheCore implements CacheCore {
             // in disk cache
             byte[] rawResponse = stringObject.getBytes();
             // and save in memory cache
-            memoryCache.put(url, new TimeAndObject(expireTime, rawResponse));
+            memoryCache.put(key, new TimeAndObject(expireTime, rawResponse));
             return rawResponse;
 
         } catch (IOException e) {

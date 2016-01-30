@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(final View v) {
                 // 使用自动生成的包装方法来缓存rxjava请求
-                MainActivity_Cache.requestRxjava(MainActivity.this, new Random().nextInt(2), 2)
+               /* MainActivity_Cache.requestRxjava(MainActivity.this, new Random().nextInt(2), 2)
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(new Action1<String>() {
@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
                                         .setAction("Action", null).show();
                                 Log.i("cache", "result = " + result);
                             }
-                        });
+                        });*/
                 final Timer timer = new Timer();
                 timer.setStartTime();
 
@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
      * 模拟耗时的rxjava请求
      * @return
      */
-    @CacheInMemory(timeOut = 10_000)
+    //@CacheInMemory(timeOut = 10_000)
     public Observable<String> requestRxjava(final int value,  int iccf) {
         return Observable.just(null)
                 .map(new Func1<Object, String>() {
