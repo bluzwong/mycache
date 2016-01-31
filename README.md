@@ -74,7 +74,7 @@ Api api = new Retrofit.Builder()
                 .build()
                 .create(Api.class);
 ```
-使用被 @MyCache(timeOut = 5000) 注解过的api将会进行缓存
+使用被 @MyCache(timeOut = 5000) 注解过的方法将会进行缓存
 
 ---
 ### 很惭愧，只做了一些微小的工作。谢谢！
