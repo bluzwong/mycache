@@ -1,27 +1,16 @@
-package com.github.bluzwong.mycache;
+package com.github.bluzwong.mycache_lib.calladapter.model;
 
 import android.content.Context;
-import android.util.Log;
-import com.github.bluzwong.mycache_lib.CacheUtil;
-import com.github.bluzwong.mycache_lib.DefaultDiskCacheInterceptor;
-import com.github.bluzwong.mycache_lib.UrlTimeOutMap;
 import com.github.bluzwong.mycache_lib.calladapter.MyCache;
 import com.github.bluzwong.mycache_lib.calladapter.MyCacheCore;
 import com.github.bluzwong.mycache_lib.calladapter.MyCacheRxCallAdapterFactory;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 import retrofit2.GsonConverterFactory;
 import retrofit2.Retrofit;
 import retrofit2.http.GET;
 import retrofit2.http.Query;
 import retrofit2.http.Url;
 import rx.Observable;
-
-import java.io.IOException;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Created by wangzhijie on 2016/1/19.
@@ -38,9 +27,9 @@ public class WebApi {
         @GET
         Observable<Value2> getValue2(@Url String url);
 
-        @GET
+        @GET("/result.php")
         @MyCache(timeOut = 5000)
-        Observable<Result> getResult(@Url String url, @Query("value1") String value1, @Query("value2") String value2);
+        Observable<Result> getResult(@Query("value1") String value1, @Query("value2") String value2);
     }
 
 
