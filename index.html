@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>为Retrofit添加两级缓存 by bluzwong</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>为Retrofit添加两级缓存</h1>
+          <h2>为Retrofit添加两级缓存</h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/bluzwong/mycache/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/bluzwong/mycache/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/bluzwong/mycache" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h1>
+<a id="为retrofit添加两级缓存" class="anchor" href="#%E4%B8%BAretrofit%E6%B7%BB%E5%8A%A0%E4%B8%A4%E7%BA%A7%E7%BC%93%E5%AD%98" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>为Retrofit添加两级缓存</h1>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-k">if</span> (<span class="pl-k">!</span>reader<span class="pl-k">.</span>useRetrofit() <span class="pl-k">&amp;&amp;</span> <span class="pl-k">!</span>reader<span class="pl-k">.</span>useRxjava()) { <span class="pl-k">return</span>; }</pre></div>
+
+<p>以下内容需熟悉<a href="https://github.com/square/retrofit">Retrofit</a>(<a href="http://www.jcodecraeer.com/a/anzhuokaifa/androidkaifa/2015/1109/3662.html">介绍</a>) &amp; <a href="https://github.com/ReactiveX/RxJava">Rxjava</a>(<a href="http://gank.io/post/560e15be2dca930e00da1083">介绍</a>)的使用。</p>
+
+<hr>
+
+<p>Retrofit使用的<a href="https://github.com/square/okhttp">okhttp</a>(<a href="http://blog.csdn.net/lmj623565791/article/details/47911083">介绍</a>)已经对网络请求进行了缓存，但是如果服务器没有支持缓存该怎么办呢？
+以以下接口为例:</p>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-k">public</span> <span class="pl-k">interface</span> <span class="pl-en">Api</span> {
+    <span class="pl-k">@GET</span>(<span class="pl-s"><span class="pl-pds">"</span>/result.php<span class="pl-pds">"</span></span>)
+    <span class="pl-k">Observable&lt;<span class="pl-smi">Result</span>&gt;</span> <span class="pl-en">getResult</span>(<span class="pl-k">@Query</span>(<span class="pl-s"><span class="pl-pds">"</span>value1<span class="pl-pds">"</span></span>) <span class="pl-smi">String</span> <span class="pl-v">value1</span>, <span class="pl-k">@Query</span>(<span class="pl-s"><span class="pl-pds">"</span>value2<span class="pl-pds">"</span></span>) <span class="pl-smi">String</span> <span class="pl-v">value2</span>);
+}
+
+<span class="pl-smi">Api</span> api <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-smi">Retrofit</span>.<span class="pl-smi">Builder</span>()
+                .baseUrl(<span class="pl-c1">...</span>)
+                .client(<span class="pl-k">new</span> <span class="pl-smi">OkHttpClient</span>())
+                .addConverterFactory(<span class="pl-smi">GsonConverterFactory</span><span class="pl-k">.</span>create())
+                .addCallAdapterFactory(<span class="pl-smi">RxJavaCallAdapterFactory</span><span class="pl-k">.</span>create())
+                .build()
+                .create(<span class="pl-smi">Api</span><span class="pl-k">.</span>class);
+</pre></div>
+
+<p>可能会使用这种方式来操作:</p>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-k">Observable&lt;<span class="pl-smi">Result</span>&gt;</span> network <span class="pl-k">=</span> api<span class="pl-k">.</span>getResult(<span class="pl-c1">...</span>); <span class="pl-c">// 从网络获取数据</span>
+<span class="pl-k">Observable&lt;<span class="pl-smi">Result</span>&gt;</span> memory <span class="pl-k">=</span> <span class="pl-c1">...</span>; <span class="pl-c">// 从内存缓存获取数据</span>
+<span class="pl-k">Observable&lt;<span class="pl-smi">Result</span>&gt;</span> disk <span class="pl-k">=</span> <span class="pl-c1">...</span>; <span class="pl-c">// 从硬盘缓存获取数据</span>
+
+<span class="pl-k">Observable&lt;<span class="pl-smi">Result</span>&gt;</span> networkWithSave <span class="pl-k">=</span> network<span class="pl-k">.</span>doOnNext(data <span class="pl-k">-</span><span class="pl-k">&gt;</span> {
+  saveToDisk(data); <span class="pl-c">// 网络获取后进行缓存</span>
+  cacheInMemory(data);
+});
+
+<span class="pl-k">Observable&lt;<span class="pl-smi">Result</span>&gt;</span> diskWithCache <span class="pl-k">=</span> disk<span class="pl-k">.</span>doOnNext(data <span class="pl-k">-</span><span class="pl-k">&gt;</span> {
+  cacheInMemory(data); <span class="pl-c">// 从硬盘缓存获取后 再缓存到内存</span>
+});
+
+<span class="pl-c">// 将上面的进行整合使用</span>
+<span class="pl-k">Observable&lt;<span class="pl-smi">Result</span>&gt;</span> source <span class="pl-k">=</span> <span class="pl-smi">Observable</span>
+    .concat(memory, diskWithCache, networkWithSave)
+    .filter(data <span class="pl-k">-</span><span class="pl-k">&gt;</span> data <span class="pl-k">!=</span> <span class="pl-c1">null</span>)
+    .first();
+</pre></div>
+
+<p>蛤，由于Rxjava大法好以及lambda表达式，这种方式看起来不错，还挺简洁的。但是，如果有很多很多接口都要做缓存呢？岂不是每个都得经过一番这样的处理？</p>
+
+<h3>
+<a id="nuo-nuo-nuo-dont-repeat-yourself" class="anchor" href="#nuo-nuo-nuo-dont-repeat-yourself" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>NUO! NUO! NUO! DON'T REPEAT YOURSELF!</h3>
+
+<p>如果能够这样实现,是不是一颗赛艇？</p>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-k">public</span> <span class="pl-k">interface</span> <span class="pl-en">Api</span> {
+    <span class="pl-k">@GET</span>(<span class="pl-s"><span class="pl-pds">"</span>/result.php<span class="pl-pds">"</span></span>)
+    <span class="pl-k">@MyCache</span>(<span class="pl-c1">timeOut</span> <span class="pl-k">=</span> <span class="pl-c1">5000</span>)
+    <span class="pl-k">Observable&lt;<span class="pl-smi">Result</span>&gt;</span> <span class="pl-en">getResult</span>(<span class="pl-k">@Query</span>(<span class="pl-s"><span class="pl-pds">"</span>value1<span class="pl-pds">"</span></span>) <span class="pl-smi">String</span> <span class="pl-v">value1</span>, <span class="pl-k">@Query</span>(<span class="pl-s"><span class="pl-pds">"</span>value2<span class="pl-pds">"</span></span>) <span class="pl-smi">String</span> <span class="pl-v">value2</span>);
+}</pre></div>
+
+<h2>
+<a id="闷声发大财" class="anchor" href="#%E9%97%B7%E5%A3%B0%E5%8F%91%E5%A4%A7%E8%B4%A2" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>闷声发大财:</h2>
+
+<p>build.gradle</p>
+
+<div class="highlight highlight-source-groovy"><pre>compile (<span class="pl-s"><span class="pl-pds">'</span>com.github.bluzwong:mycache-lib:0.1.4@aar<span class="pl-pds">'</span></span>) { transitive <span class="pl-k">=</span> <span class="pl-c1">true</span> }</pre></div>
+
+<p>再换一个CallAdapterFactory</p>
+
+<div class="highlight highlight-source-java"><pre><span class="pl-smi">Api</span> api <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-smi">Retrofit</span>.<span class="pl-smi">Builder</span>()
+                .baseUrl(<span class="pl-c1">...</span>)
+                .client(<span class="pl-k">new</span> <span class="pl-smi">OkHttpClient</span>())
+                .addConverterFactory(<span class="pl-smi">GsonConverterFactory</span><span class="pl-k">.</span>create())
+                <span class="pl-c">//.addCallAdapterFactory(RxJavaCallAdapterFactory.create()) // 使用以下代替</span>
+                .addCallAdapterFactory(<span class="pl-smi">MyCacheRxCallAdapterFactory</span><span class="pl-k">.</span>create(<span class="pl-smi">MyCacheCore</span><span class="pl-k">.</span>create(context)))
+                .build()
+                .create(<span class="pl-smi">Api</span><span class="pl-k">.</span>class);</pre></div>
+
+<p>使用被 @MyCache(timeOut = 5000) 注解过的api将会进行缓存</p>
+
+<hr>
+
+<h3>
+<a id="很惭愧只做了一些微小的工作谢谢" class="anchor" href="#%E5%BE%88%E6%83%AD%E6%84%A7%E5%8F%AA%E5%81%9A%E4%BA%86%E4%B8%80%E4%BA%9B%E5%BE%AE%E5%B0%8F%E7%9A%84%E5%B7%A5%E4%BD%9C%E8%B0%A2%E8%B0%A2" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>很惭愧，只做了一些微小的工作。谢谢！</h3>
+        </section>
+
+        <footer>
+          为Retrofit添加两级缓存 is maintained by <a href="https://github.com/bluzwong">bluzwong</a><br>
+          This page was generated by <a href="https://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
+    </div>
+  </body>
+</html>
