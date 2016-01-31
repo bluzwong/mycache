@@ -34,7 +34,7 @@ public class WebApi {
 
 
 
-    private Retrofit retrofit;
+    public Retrofit retrofit;
     public MyService myService;
 
     public synchronized void init(Context context) {

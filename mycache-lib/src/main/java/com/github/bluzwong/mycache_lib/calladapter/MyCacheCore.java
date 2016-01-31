@@ -69,13 +69,18 @@ public class MyCacheCore implements CacheCore {
         memoryCache.put(key, new TimeAndObject(expireTime, rawResponse));
         if (diskCache == null) { return; }
 
-        preferences.edit().putLong(key, expireTime).apply();
-        try {
-            DiskLruCache.Editor editor = diskCache.edit(key);
-            editor.set(0, new String(rawResponse, "UTF-8"));
-            editor.commit();
-        } catch (IOException e) {
-            e.printStackTrace();
+        synchronized (this) {
+            preferences.edit().putLong(key, expireTime).apply();
+            try {
+                DiskLruCache.Editor editor = diskCache.edit(key);
+                if (editor == null) {
+                    return;
+                }
+                editor.set(0, new String(rawResponse, "UTF-8"));
+                editor.commit();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -146,6 +151,18 @@ public class MyCacheCore implements CacheCore {
             this.expireTime = expireTime;
             this.object = object;
         }
+    }
+
+    public DiskLruCache getDiskCore() {
+        return diskCache;
+    }
+
+    public LruCache<String, TimeAndObject> getMemoryCache() {
+        return memoryCache;
+    }
+
+    public String getKeyByUrl(String url) {
+        return MyUtils.getMD5(url);
     }
 
     public interface WillSave {

@@ -64,7 +64,7 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
         return callAdapter;
     }
 
-    private CallAdapter<Observable<?>> getCallAdapter(Type returnType, Annotation[] annotations, Retrofit retrofit) {
+    final CallAdapter<Observable<?>> getCallAdapter(Type returnType, Annotation[] annotations, Retrofit retrofit) {
         Type observableType = Utils.getParameterUpperBound(0, (ParameterizedType) returnType);
         Class<?> rawObservableType = Utils.getRawType(observableType);
         if (rawObservableType == Response.class) {
@@ -132,6 +132,7 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
             }
         }
     }
+
 
     static final class ResponseCallAdapter implements CallAdapter<Observable<?>> {
         private final Type responseType;
