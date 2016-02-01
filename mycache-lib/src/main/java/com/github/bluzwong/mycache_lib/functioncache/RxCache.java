@@ -11,5 +11,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface RxCache {
-    long timeOut() default 0;
+    long timeOut() default RxCacheCore.ALWAYS_CACHE;
 }

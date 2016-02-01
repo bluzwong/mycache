@@ -5,6 +5,7 @@ import static com.github.bluzwong.mycache_lib.CacheHelper.*;
 import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Action1;
+import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
@@ -19,7 +20,6 @@ import java.util.concurrent.TimeUnit;
 public enum RxCacheAdapter {
     INSTANCE;
 
-    public static final String DEFAULT_NAME = "RxCache-lib";
     private Map<String, CountDownLatch> latches = new HashMap<>();
     private RxCacheCore cacheCore;
 
@@ -30,24 +30,41 @@ public enum RxCacheAdapter {
         this.cacheCore = cacheCore;
     }
 
+    // todo for test
+    RxCacheCore getCacheCore() {
+        return cacheCore;
+    }
 
-    public <T> Observable<T> addCache(final Observable<T> originOb, final String key, final long timeout) {
+    // todo for test
+    Map<String, CountDownLatch> getLatches() {
+        return latches;
+    }
+
+    public <T> Observable<T> cachedObservable(final Observable<T> originOb, final String key, final long timeout) {
+        if (cacheCore == null) {
+            throw new IllegalArgumentException("init(RxCacheCore cacheCore) must be called!");
+        }
         Observable<T> loadFromCache = loadFromCache(key, timeout);
-        Observable<T> cachedLatchOriginOb = Observable.just(addToLatches(key))
-                .flatMap(new Func1<CountDownLatch, Observable<T>>() {
-                    @Override
-                    public Observable<T> call(CountDownLatch countDownLatch) {
-                        return saveToCache(originOb, key, timeout).subscribeOn(Schedulers.io());
-                    }
-                }).doOnNext(new Action1<T>() {
-                    @Override
-                    public void call(T t) {
-                        removeFromLatches(key);
-                    }
-                });
+        Observable<T> cachedLatchOriginOb = Observable.defer(new Func0<Observable<CountDownLatch>>() {
+            @Override
+            public Observable<CountDownLatch> call() {
+                return Observable.just(addToLatches(key));
+            }
+        }).flatMap(new Func1<CountDownLatch, Observable<T>>() {
+            @Override
+            public Observable<T> call(CountDownLatch countDownLatch) {
+                return saveToCache(originOb, key, timeout).subscribeOn(Schedulers.io());
+            }
+        }).doOnNext(new Action1<T>() {
+            @Override
+            public void call(T t) {
+                removeFromLatches(key);
+            }
+        });
 
 
         Observable<T> secondLoadFromCacheOrOrigin = secondLoadFromCacheOrOrigin(cachedLatchOriginOb, key, timeout);
+
         return Observable.concat(loadFromCache.subscribeOn(Schedulers.io()), secondLoadFromCacheOrOrigin.subscribeOn(Schedulers.io()))
                 .filter(new Func1<T, Boolean>() {
                     @Override
@@ -55,22 +72,21 @@ public enum RxCacheAdapter {
                         return t != null;
                     }
                 }).first();
-
     }
 
-    private <T> Observable<T> secondLoadFromCacheOrOrigin(Observable<T> originOb, final String key, final long timeout) {
-        return waitIfNeed(key)
+    <T> Observable<T> secondLoadFromCacheOrOrigin(Observable<T> originOb, final String key, final long timeout) {
+        return Observable.concat(waitIfNeed(key)
                 .subscribeOn(Schedulers.io())
                 .flatMap(new Func1<Boolean, Observable<T>>() {
                     @Override
                     public Observable<T> call(Boolean needLoadCache) {
-                        if (needLoadCache) {
-                            Observable<T> loadFromCache = loadFromCache(key, timeout);
+                        Observable<T> loadFromCache = loadFromCache(key, timeout);
+                        if (true || needLoadCache) {
                             return loadFromCache.subscribeOn(Schedulers.io());
                         }
                         return Observable.empty();
                     }
-                }).concatWith(originOb.subscribeOn(Schedulers.io()).observeOn(Schedulers.io()))
+                }), originOb)
                 .filter(new Func1<T, Boolean>() {
                     @Override
                     public Boolean call(T t) {
@@ -80,7 +96,7 @@ public enum RxCacheAdapter {
     }
 
 
-    private void removeFromLatches(String key) {
+    void removeFromLatches(String key) {
         if (latches.containsKey(key)) {
             CountDownLatch latch = latches.get(key);
             if (latch != null) {
@@ -90,7 +106,7 @@ public enum RxCacheAdapter {
         }
     }
 
-    private CountDownLatch addToLatches(String key) {
+    CountDownLatch addToLatches(String key) {
         if (latches.containsKey(key)) {
             CountDownLatch latch = latches.get(key);
             if (latch != null) {
@@ -102,7 +118,7 @@ public enum RxCacheAdapter {
         return latch;
     }
 
-    private <T> Observable<T> loadFromCache(final String key, final long timeout) {
+    <T> Observable<T> loadFromCache(final String key, final long timeout) {
         return Observable.create(new Observable.OnSubscribe<T>() {
             @Override
             public void call(Subscriber<? super T> subscriber) {
@@ -121,7 +137,7 @@ public enum RxCacheAdapter {
         });
     }
 
-    private <T> Observable<T> saveToCache(Observable<T> originOb, final String key, final long timeout) {
+    <T> Observable<T> saveToCache(Observable<T> originOb, final String key, final long timeout) {
         return originOb.doOnNext(new Action1<T>() {
             @Override
             public void call(T t) {
@@ -135,7 +151,7 @@ public enum RxCacheAdapter {
         });
     }
 
-    private Observable<Boolean> waitIfNeed(final String key) {
+    Observable<Boolean> waitIfNeed(final String key) {
         return Observable.create(new Observable.OnSubscribe<Boolean>() {
             @Override
             public void call(Subscriber<? super Boolean> subscriber) {
