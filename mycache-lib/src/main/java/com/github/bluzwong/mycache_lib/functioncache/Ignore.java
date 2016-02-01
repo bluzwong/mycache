@@ -1,4 +1,4 @@
-package com.github.bluzwong.mycache_lib;
+package com.github.bluzwong.mycache_lib.functioncache;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

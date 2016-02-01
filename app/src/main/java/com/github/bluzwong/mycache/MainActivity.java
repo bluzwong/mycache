@@ -23,7 +23,7 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        CacheUtil.setNeedLog(true);
+        CacheUtils.setNeedLog(true);
         api = new WebApi();
         api.init(this);
         initBtn();

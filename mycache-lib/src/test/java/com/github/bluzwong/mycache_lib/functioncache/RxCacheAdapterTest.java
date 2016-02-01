@@ -2,7 +2,7 @@ package com.github.bluzwong.mycache_lib.functioncache;
 
 import android.content.Context;
 import com.github.bluzwong.mycache_lib.BuildConfig;
-import com.github.bluzwong.mycache_lib.functioncache.data.EasyRxCacheCore;
+import com.github.bluzwong.mycache_lib.impl.SimpleRxCacheCore;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

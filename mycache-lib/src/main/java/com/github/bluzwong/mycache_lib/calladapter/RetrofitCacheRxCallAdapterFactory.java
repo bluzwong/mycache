@@ -1,5 +1,6 @@
 package com.github.bluzwong.mycache_lib.calladapter;
 
+import com.github.bluzwong.mycache_lib.CacheUtils;
 import okhttp3.Request;
 import retrofit2.*;
 import rx.Observable;
@@ -24,21 +25,21 @@ import java.util.concurrent.TimeUnit;
  */
 
 
-public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
+public final class RetrofitCacheRxCallAdapterFactory implements CallAdapter.Factory {
 
-    private CacheCore cacheCore;
+    private RetrofitCacheCore cacheCore;
 
     /**
      * TODO
      */
-    public static MyCacheRxCallAdapterFactory create(CacheCore cacheCore) {
+    public static RetrofitCacheRxCallAdapterFactory create(RetrofitCacheCore cacheCore) {
         if (cacheCore == null) {
             throw new IllegalArgumentException("CacheCore can not be null.");
         }
-        return new MyCacheRxCallAdapterFactory(cacheCore);
+        return new RetrofitCacheRxCallAdapterFactory(cacheCore);
     }
 
-    private MyCacheRxCallAdapterFactory(CacheCore cacheCore) {
+    private RetrofitCacheRxCallAdapterFactory(RetrofitCacheCore cacheCore) {
         this.cacheCore = cacheCore;
     }
 
@@ -86,8 +87,8 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
         }
 
         for (Annotation annotation : annotations) {
-            if (annotation instanceof MyCache) {
-                MyCache myCache = (MyCache) annotation;
+            if (annotation instanceof RetrofitCache) {
+                RetrofitCache myCache = (RetrofitCache) annotation;
                 return new SimpleCacheCallAdapter(retrofit, observableType, cacheCore, annotations, myCache.timeOut());
             }
         }
@@ -183,12 +184,12 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
     static final class SimpleCacheCallAdapter implements CallAdapter<Observable<?>> {
         private Retrofit retrofit;
         private final Type responseType;
-        private CacheCore cacheCore;
+        private RetrofitCacheCore cacheCore;
         private Annotation[] annotations;
         private long timeOut;
         private Map<String, CountDownLatch> latches = new HashMap<>();
 
-        SimpleCacheCallAdapter(Retrofit retrofit, Type responseType, CacheCore cacheCore, Annotation[] annotations, long timeOut) {
+        SimpleCacheCallAdapter(Retrofit retrofit, Type responseType, RetrofitCacheCore cacheCore, Annotation[] annotations, long timeOut) {
             this.retrofit = retrofit;
             this.responseType = responseType;
             this.cacheCore = cacheCore;
@@ -212,9 +213,9 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
 
         @Override
         public <R> Observable<R> adapt(Call<R> call) {
-            Request request = MyUtils.buildRequestFromCall(call);
+            Request request = RetrofitUtils.buildRequestFromCall(call);
             final String url = request.url().toString();
-            MyUtils.cacheLog("this requesting url => " + url);
+            CacheUtils.cacheLog("this requesting url => " + url);
             final Observable<R> realRequestObservable = Observable.create(new CallOnSubscribe<>(call)) //
                     .flatMap(new Func1<Response<R>, Observable<R>>() {
                         @Override
@@ -223,7 +224,7 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
                             if (response.isSuccess()) {
                                 return Observable.just(response.body());
                             }
-                            MyUtils.cacheLog("response error @@@ requesting end remove latch from map => " + url);
+                            CacheUtils.cacheLog("response error @@@ requesting end remove latch from map => " + url);
                             removeFromLatches(url);
                             return Observable.error(new HttpException(response));
                         }
@@ -234,11 +235,11 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
                 @Override
                 public void call(Subscriber<? super R> subscriber) {
                     if (!latches.containsKey(url)) {
-                        MyUtils.cacheLog("before real request put latch to map => " + url);
+                        CacheUtils.cacheLog("before real request put latch to map => " + url);
                         CountDownLatch countDownLatch = new CountDownLatch(1);
                         latches.put(url, countDownLatch);
                     } else {
-                        MyUtils.cacheLog("before real request latch exists => " + url);
+                        CacheUtils.cacheLog("before real request latch exists => " + url);
                     }
                     subscriber.onNext(null);
                     subscriber.onCompleted();
@@ -251,14 +252,14 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
             }).doOnNext(new Action1<R>() {
                 @Override
                 public void call(R r) {
-                    byte[] rawResponse = MyUtils.getRawResponseFromEntity(r, retrofit, responseType, annotations);
+                    byte[] rawResponse = RetrofitUtils.getRawResponseFromEntity(r, retrofit, responseType, annotations);
                     if (rawResponse == null || rawResponse.length <= 0) {
-                        MyUtils.cacheLog("WARN! raw response is empty");
-                        MyUtils.cacheLog("response is empty WARN @@@ requesting end remove latch from map => " + url);
+                        CacheUtils.cacheLog("WARN! raw response is empty");
+                        CacheUtils.cacheLog("response is empty WARN @@@ requesting end remove latch from map => " + url);
                         removeFromLatches(url);
                         return;
                     }
-                    MyUtils.cacheLog("try save cache ,then requesting end remove latch from map => " + url);
+                    CacheUtils.cacheLog("try save cache ,then requesting end remove latch from map => " + url);
                     cacheCore.saveCache(url, rawResponse, timeOut);
                     removeFromLatches(url);
                 }
@@ -270,7 +271,7 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
                     CountDownLatch latch = latches.get(url);
                     if (latch == null) {
                         // is not requesting
-                        MyUtils.cacheLog("no latch no wait => " + url);
+                        CacheUtils.cacheLog("no latch no wait => " + url);
                         // do not need load from cache
                         subscriber.onNext(false);
                         subscriber.onCompleted();
@@ -278,13 +279,13 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
                     }
                     try {
                         // wait for request finish
-                        MyUtils.cacheLog("latch await until request complete => " + url);
+                        CacheUtils.cacheLog("latch await until request complete => " + url);
                         latch.await(10, TimeUnit.SECONDS);
                         // request finished
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    MyUtils.cacheLog("latch await down go next => " + url);
+                    CacheUtils.cacheLog("latch await down go next => " + url);
                     // try from cache
                     subscriber.onNext(true);
                     subscriber.onCompleted();
@@ -296,16 +297,16 @@ public final class MyCacheRxCallAdapterFactory implements CallAdapter.Factory {
             final Observable<R> tryLoadCache = Observable.create(new Observable.OnSubscribe<R>() {
                 @Override
                 public void call(Subscriber<? super R> subscriber) {
-                    MyUtils.cacheLog("try load from cache => " + url);
+                    CacheUtils.cacheLog("try load from cache => " + url);
                     byte[] bytesFromCache = cacheCore.loadCache(url, timeOut);
                     if (bytesFromCache != null && bytesFromCache.length > 0) {
-                        R entityFromResponse = MyUtils.getEntityFromResponse(bytesFromCache, retrofit, responseType, annotations);
+                        R entityFromResponse = RetrofitUtils.getEntityFromResponse(bytesFromCache, retrofit, responseType, annotations);
                         if (entityFromResponse != null) {
-                            MyUtils.cacheLog("hit cache => " + url);
+                            CacheUtils.cacheLog("hit cache => " + url);
                             subscriber.onNext(entityFromResponse);
                         }
                     } else {
-                        MyUtils.cacheLog("not cached => " + url);
+                        CacheUtils.cacheLog("not cached => " + url);
                     }
                     subscriber.onCompleted();
                 }

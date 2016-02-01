@@ -3,20 +3,15 @@ package com.github.bluzwong.mycache_lib;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import okhttp3.*;
+import android.util.Log;
 
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Map;
 
 /**
  * Created by wangzhijie@wind-mobi.com on 2015/8/27.
  */
-public class CacheUtil {
+public class CacheUtils {
 
     private static boolean sNeedLog = false;
 
@@ -34,37 +29,11 @@ public class CacheUtil {
     }
 
     // manual do with memory cache
-    public Map<String, CacheInfoObject> getDefaultMemoryMap() {
-        return MemoryCacheManager.INSTANCE.getMap();
-    }
-
-    public static String getMethodName(Class clz, Method method) {
-        String clzName = clz.getName();
-        String methodName = method.getName();
-        return clzName + "." + methodName;
-    }
-
-    private static ICacheManager manager;
-
-
-    public static Cache myCacheCache(Context context, long size) {
-        File httpCacheDirectory = new File(context.getExternalCacheDir(), "my-cache-lib-disk");
-        return new Cache(httpCacheDirectory, size);
-    }
-
-    public static OkHttpClient myCacheClient(Context context, DefaultDiskCacheInterceptor interceptor) {
-        return new OkHttpClient.Builder()
-                .cache(myCacheCache(context, 10 * 1024 * 1024))
-                .addInterceptor(interceptor)
-                .build();
-    }
-
-    static String getMD5(String info) {
+    public static String getMD5(String info) {
         return getMD5(info.getBytes());
     }
 
-
-    static String getMD5(byte[] info) {
+    public static String getMD5(byte[] info) {
         if (null == info || info.length == 0) {
             return null;
         }
@@ -89,5 +58,27 @@ public class CacheUtil {
             buf.append(Integer.toHexString(i));
         }
         return buf.toString();
+    }
+
+    public static void cacheLog(String msg) {
+        cacheLog(msg, -1);
+    }
+
+    public static void logWarn(String msg) {
+        if (CacheUtils.isNeedLog()) {
+            Log.w("mycache", msg);
+        }
+    }
+
+    public static void cacheLog(String msg, long startTime) {
+        if (CacheUtils.isNeedLog()) {
+            if (startTime > 0) {
+                long t = System.currentTimeMillis() - startTime;
+                msg = "[" + t + "ms] " + msg;
+                Log.i("mycache", msg);
+            } else {
+                Log.d("mycache", msg);
+            }
+        }
     }
 }

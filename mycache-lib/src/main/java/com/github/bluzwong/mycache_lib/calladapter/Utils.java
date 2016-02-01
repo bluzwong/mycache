@@ -15,8 +15,6 @@ import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import java.util.Arrays;
 
-import android.util.Log;
-import com.github.bluzwong.mycache_lib.CacheUtil;
 import okhttp3.ResponseBody;
 import okio.Buffer;
 

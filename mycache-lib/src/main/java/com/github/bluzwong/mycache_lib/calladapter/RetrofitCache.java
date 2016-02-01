@@ -11,6 +11,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  */
 @Target(METHOD)
 @Retention(RUNTIME)
-public @interface MyCache {
-    long timeOut() default CacheCore.ALWAYS_CACHE;
+public @interface RetrofitCache {
+    long timeOut() default RetrofitCacheCore.ALWAYS_CACHE;
 }

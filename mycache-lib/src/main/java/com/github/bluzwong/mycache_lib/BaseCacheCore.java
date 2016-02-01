@@ -2,7 +2,7 @@ package com.github.bluzwong.mycache_lib;
 
 import android.content.SharedPreferences;
 import android.util.LruCache;
-import com.github.bluzwong.mycache_lib.calladapter.CacheCore;
+import com.github.bluzwong.mycache_lib.calladapter.RetrofitCacheCore;
 import io.paperdb.Book;
 
 
@@ -107,14 +107,14 @@ public class BaseCacheCore {
         if (object == null) {
             return;
         }
-        if (timeOut == CacheCore.NO_CACHE || timeOut <= 0) {
+        if (timeOut == RetrofitCacheCore.NO_CACHE || timeOut <= 0) {
             return;
         }
 
         long now = System.currentTimeMillis();
         long expireTime = now + timeOut;
 
-        if (timeOut == Long.MAX_VALUE || timeOut == CacheCore.ALWAYS_CACHE) {
+        if (timeOut == Long.MAX_VALUE || timeOut == RetrofitCacheCore.ALWAYS_CACHE) {
             expireTime = Long.MAX_VALUE;
         }
 
@@ -156,8 +156,8 @@ public class BaseCacheCore {
             return null;
         }
 
-        long expireTime = preferences.getLong(key, CacheCore.NO_CACHE);
-        if (expireTime == CacheCore.NO_CACHE || expireTime <= 0 || expireTime < now || expireTime > now + timeOut) {
+        long expireTime = preferences.getLong(key, RetrofitCacheCore.NO_CACHE);
+        if (expireTime == RetrofitCacheCore.NO_CACHE || expireTime <= 0 || expireTime < now || expireTime > now + timeOut) {
             // time out or no need to cache
             removeByKey(key);
             return null;

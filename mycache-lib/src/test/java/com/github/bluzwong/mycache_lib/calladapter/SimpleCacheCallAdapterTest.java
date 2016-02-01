@@ -4,6 +4,7 @@ import android.content.Context;
 import com.github.bluzwong.mycache_lib.calladapter.model.*;
 import com.github.bluzwong.mycache_lib.BuildConfig;
 import com.github.bluzwong.mycache_lib.calladapter.model.Result;
+import com.github.bluzwong.mycache_lib.impl.SimpleRetroCacheCore;
 import com.google.gson.reflect.TypeToken;
 import org.junit.After;
 import org.junit.Before;
@@ -19,7 +20,6 @@ import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.concurrent.CountDownLatch;
 
@@ -34,11 +34,11 @@ public class SimpleCacheCallAdapterTest {
 
     WebApi.MyService service;
     Context context;
-    MyCacheRxCallAdapterFactory factory;
+    RetrofitCacheRxCallAdapterFactory factory;
     Retrofit retrofit;
     Type type = new TypeToken<Observable<String>>() {}.getType();
     Annotation[] annotations;
-    MyCacheCore cacheCore;
+    SimpleRetroCacheCore cacheCore;
     @Before
     public void setUp() throws Exception {
         context = RuntimeEnvironment.application;
@@ -46,8 +46,8 @@ public class SimpleCacheCallAdapterTest {
         api.init(context);
         retrofit = api.retrofit;
         service = api.myService;
-        cacheCore = MyCacheCore.create(context);
-        factory = MyCacheRxCallAdapterFactory.create(cacheCore);
+        cacheCore = SimpleRetroCacheCore.create(context);
+        factory = RetrofitCacheRxCallAdapterFactory.create(cacheCore);
         annotations = getClass().getDeclaredMethod("testForAnnotation").getAnnotations();
     }
 
@@ -57,7 +57,7 @@ public class SimpleCacheCallAdapterTest {
         cacheCore.getMemoryCache().evictAll();
     }
 
-    @MyCache
+    @RetrofitCache
     private void testForAnnotation() {}
 
     @Test
@@ -69,7 +69,7 @@ public class SimpleCacheCallAdapterTest {
     @Test
     public void testGetCallAdapter() throws Exception {
         CallAdapter<Observable<?>> adapter = factory.getCallAdapter(type, annotations, retrofit);
-        assertTrue(adapter instanceof MyCacheRxCallAdapterFactory.SimpleCacheCallAdapter);
+        assertTrue(adapter instanceof RetrofitCacheRxCallAdapterFactory.SimpleCacheCallAdapter);
     }
 
     @Test

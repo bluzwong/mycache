@@ -5,7 +5,7 @@ import com.github.bluzwong.mycache_lib.BaseCacheCore;
 import com.github.bluzwong.mycache_lib.BuildConfig;
 import com.github.bluzwong.mycache_lib.functioncache.data.Person;
 import com.github.bluzwong.mycache_lib.functioncache.data.TestDataGenerator;
-import org.junit.After;
+import com.github.bluzwong.mycache_lib.impl.SimpleRxCacheCore;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

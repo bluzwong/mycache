@@ -1,6 +1,6 @@
 package com.github.bluzwong.mycache_lib.functioncache;
 
-import static com.github.bluzwong.mycache_lib.CacheHelper.*;
+import static com.github.bluzwong.mycache_lib.CacheUtils.*;
 
 import rx.Observable;
 import rx.Subscriber;
