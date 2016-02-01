@@ -3,6 +3,8 @@ package com.github.bluzwong.mycache_lib.functioncache;
 import android.content.Context;
 import com.github.bluzwong.mycache_lib.BaseCacheCore;
 import com.github.bluzwong.mycache_lib.BuildConfig;
+import com.github.bluzwong.mycache_lib.functioncache.data.Person;
+import com.github.bluzwong.mycache_lib.functioncache.data.TestDataGenerator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -60,7 +62,7 @@ public class SimpleRxCacheCoreTest {
     public void testSaveCache() throws Exception {
         long startTime = System.currentTimeMillis();
         cacheCore.saveCache("ccf", "ccf-obj", 500);
-        String ccfKey = cacheCore.getKeyBySign("ccf");
+        String ccfKey = "ccf";
         BaseCacheCore.TimeAndObject timeAndObject = cacheCore.getMemoryCache().get(ccfKey);
         assertNotNull(timeAndObject);
         assertNotNull(timeAndObject.object);
@@ -80,7 +82,7 @@ public class SimpleRxCacheCoreTest {
         assertEquals("ccf-obj", readFromBook);
 
         cacheCore.saveCache("ccf-no save", "ccf-obj-nosave", 1000);
-        String keyNoSave = cacheCore.getKeyBySign("ccf-no save");
+        String keyNoSave = "ccf-no save";
         long nosaveTimeOut = cacheCore.getPreferences().getLong(keyNoSave, -1);
         assertEquals(nosaveTimeOut, -1);
 
@@ -103,5 +105,68 @@ public class SimpleRxCacheCoreTest {
 
         Object loadCache = cacheCore.loadCache(keyNoLoad, 500);
         assertNull(loadCache);
+    }
+
+    @Test
+    public void testTwice() {
+        cacheCore.saveCache("ccf", "wsd", 5000);
+        cacheCore.saveCache("ccf", "wsd2", 5000);
+        int size = cacheCore.getMemoryCache().size();
+        assertEquals(size, 1);
+        BaseCacheCore.TimeAndObject ccf1 = cacheCore.getMemoryCache().get("ccf");
+        assertEquals(ccf1.object, "wsd2");
+        boolean ccfExists = cacheCore.getBook().exist("ccf");
+        assertTrue(ccfExists);
+        Object ccf = cacheCore.getBook().read("ccf");
+        assertEquals(ccf, "wsd2");
+    }
+
+    @Test
+    public void testClearAll() {
+        cacheCore.saveCache("ccf", "wsd", 5000);
+        cacheCore.saveCache("ccf2", "wsd2", 5000);
+        int size = cacheCore.getMemoryCache().size();
+        assertEquals(size, 2);
+        cacheCore.clearAll();
+
+        size = cacheCore.getMemoryCache().size();
+        assertEquals(size, 0);
+        assertFalse(cacheCore.getBook().exist("ccf"));
+        assertFalse(cacheCore.getBook().exist("ccf2"));
+    }
+
+    @Test
+    public void testClearMemory() {
+        cacheCore.saveCache("ccf", "wsd", 5000);
+        cacheCore.saveCache("ccf2", "wsd2", 5000);
+        int size = cacheCore.getMemoryCache().size();
+        assertEquals(size, 2);
+        cacheCore.clearMemoryCache();
+        size = cacheCore.getMemoryCache().size();
+        assertEquals(size, 0);
+        assertTrue(cacheCore.getBook().exist("ccf"));
+        assertTrue(cacheCore.getBook().exist("ccf2"));
+    }
+
+    @Test
+    public void testClearDisk() {
+        cacheCore.saveCache("ccf", "wsd", 5000);
+        cacheCore.saveCache("ccf2", "wsd2", 5000);
+        assertTrue(cacheCore.getBook().exist("ccf"));
+        assertTrue(cacheCore.getBook().exist("ccf2"));
+        cacheCore.clearDiskCache();
+        assertFalse(cacheCore.getBook().exist("ccf"));
+        assertFalse(cacheCore.getBook().exist("ccf2"));
+        int size = cacheCore.getMemoryCache().size();
+        assertEquals(size, 2);
+    }
+
+    @Test
+    public void testNestedClass() {
+        Person origin = TestDataGenerator.genPerson(2);
+        cacheCore.saveCache("nested", origin, 5000);
+
+        Object load = cacheCore.loadCache("nested", 5000);
+        assertEquals(origin, load);
     }
 }

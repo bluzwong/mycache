@@ -63,9 +63,7 @@ public class BaseCacheCore {
         this.willLoad = willLoad;
     }
 
-    public String getKeyBySign(String sign) {
-        return CacheUtil.getMD5(sign);
-    }
+
 
     private void removeByKey(String key) {
         memoryCache.remove(key);
@@ -81,9 +79,29 @@ public class BaseCacheCore {
             }
         }
     }
+    public void clearMemoryCache() {
+        memoryCache.evictAll();
+    }
 
-    protected void baseSaveCache(String sign, Object object, long timeOut) {
-        if (willSave != null && !willSave.shouldSave(sign, object, timeOut)) {
+    public void clearDiskCache() {
+        if (preferences != null) {
+            SharedPreferences.Editor editor = preferences.edit();
+            if (editor != null) {
+                editor.clear();
+            }
+        }
+        if (book != null) {
+            book.destroy();
+        }
+    }
+
+    public void clearAll() {
+        clearDiskCache();
+        clearMemoryCache();
+    }
+
+    protected void baseSaveCache(String key, Object object, long timeOut) {
+        if (willSave != null && !willSave.shouldSave(key, object, timeOut)) {
             return;
         }
         if (object == null) {
@@ -99,7 +117,6 @@ public class BaseCacheCore {
         if (timeOut == Long.MAX_VALUE || timeOut == CacheCore.ALWAYS_CACHE) {
             expireTime = Long.MAX_VALUE;
         }
-        String key = getKeyBySign(sign);
 
         memoryCache.put(key, new TimeAndObject(expireTime, object));
         if (preferences == null || book == null) {
@@ -110,16 +127,18 @@ public class BaseCacheCore {
             return;
         }
         editor.putLong(key, expireTime).apply();
+        if (book.exist(key)) {
+            book.delete(key);
+        }
         book.write(key, object);
     }
 
-    protected Object baseLoadCache(String sign, long timeOut) {
-        if (willLoad != null && !willLoad.shouldLoad(sign)) {
+    protected Object baseLoadCache(String key, long timeOut) {
+        if (willLoad != null && !willLoad.shouldLoad(key)) {
             return null;
         }
         long now = System.currentTimeMillis();
 
-        String key = getKeyBySign(sign);
         TimeAndObject timeAndObject = memoryCache.get(key);
         if (timeAndObject != null && timeAndObject.object != null) {
             if (timeAndObject.expireTime >= now && timeAndObject.expireTime <= now + timeOut) {

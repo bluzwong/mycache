@@ -35,12 +35,12 @@ public class SimpleRxCacheCore extends BaseCacheCore implements RxCacheCore {
     }
 
     @Override
-    public <T> void saveCache(String sign, T object, long timeOut) {
-        baseSaveCache(sign, object, timeOut);
+    public <T> void saveCache(String key, T object, long timeOut) {
+        baseSaveCache(key, object, timeOut);
     }
 
     @Override
-    public <T> T loadCache(String sign, long timeOut) {
-        return (T) baseLoadCache(sign, timeOut);
+    public <T> T loadCache(String key, long timeOut) {
+        return (T) baseLoadCache(key, timeOut);
     }
 }

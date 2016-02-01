@@ -6,6 +6,6 @@ package com.github.bluzwong.mycache_lib.functioncache;
 public interface RxCacheCore {
     long NO_CACHE = -1;
     long ALWAYS_CACHE = Long.MAX_VALUE;
-    <T> void saveCache(String sign, T object, long timeOut);
-    <T>T loadCache(String sign, long timeOut);
+    <T> void saveCache(String key, T object, long timeOut);
+    <T>T loadCache(String key, long timeOut);
 }
