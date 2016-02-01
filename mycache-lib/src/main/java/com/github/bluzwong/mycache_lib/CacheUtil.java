@@ -9,6 +9,8 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
 /**
@@ -55,5 +57,37 @@ public class CacheUtil {
                 .cache(myCacheCache(context, 10 * 1024 * 1024))
                 .addInterceptor(interceptor)
                 .build();
+    }
+
+    static String getMD5(String info) {
+        return getMD5(info.getBytes());
+    }
+
+
+    static String getMD5(byte[] info) {
+        if (null == info || info.length == 0) {
+            return null;
+        }
+        StringBuilder buf = new StringBuilder("");
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            return null;
+        }
+        md.update(info);
+        byte b[] = md.digest();
+        int i;
+
+        for (int offset = 0; offset < b.length; offset++) {
+            i = b[offset];
+            if (i < 0)
+                i += 256;
+            if (i < 16)
+                buf.append("0");
+            buf.append(Integer.toHexString(i));
+        }
+        return buf.toString();
     }
 }

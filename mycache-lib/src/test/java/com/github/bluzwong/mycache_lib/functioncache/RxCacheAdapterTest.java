@@ -1,9 +1,15 @@
 package com.github.bluzwong.mycache_lib.functioncache;
 
+import android.content.Context;
+import com.github.bluzwong.mycache_lib.BuildConfig;
 import com.github.bluzwong.mycache_lib.functioncache.data.EasyRxCacheCore;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricGradleTestRunner;
+import org.robolectric.RuntimeEnvironment;
+import org.robolectric.annotation.Config;
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
@@ -17,14 +23,24 @@ import static org.junit.Assert.*;
 /**
  * Created by bluzwong on 2016/2/1.
  */
+@RunWith(RobolectricGradleTestRunner.class)
+@Config(constants = BuildConfig.class)
 public class RxCacheAdapterTest {
 
     RxCacheAdapter adapter;
+    Context context;
 
+    SimpleRxCacheCore cacheCore;
     @Before
     public void setUp() throws Exception {
+        context = RuntimeEnvironment.application;
         adapter = RxCacheAdapter.INSTANCE;
-        adapter.init(new EasyRxCacheCore());
+        //adapter.init(new EasyRxCacheCore());
+        cacheCore = SimpleRxCacheCore.create(context);
+        cacheCore.getBook().destroy();
+        cacheCore.getPreferences().edit().clear().commit();
+        cacheCore.getMemoryCache().evictAll();
+        adapter.init(cacheCore);
         adapter.getLatches().clear();
     }
 
@@ -156,7 +172,7 @@ public class RxCacheAdapterTest {
         assertTrue(System.currentTimeMillis() - startTime > 200);
         assertTrue(System.currentTimeMillis() - startTime < 400);
         assertNotEquals(using[1],using[0]);
-        assertTrue(using[1] + 100 < using[0] + 15);
+        assertTrue(using[1] + 40 < using[0]);
 
 
         int size = adapter.getLatches().size();

@@ -11,13 +11,13 @@ import java.util.Map;
 public class EasyRxCacheCore implements RxCacheCore {
     Map<String, ObjectAndExpireTime> map = new HashMap<>();
     @Override
-    public <T> void saveCache(String key, T object, long timeOut) {
-        map.put(key, new ObjectAndExpireTime(object, System.currentTimeMillis() + timeOut));
+    public <T> void saveCache(String sign, T object, long timeOut) {
+        map.put(sign, new ObjectAndExpireTime(object, System.currentTimeMillis() + timeOut));
     }
 
     @Override
-    public <T> T loadCache(String key, long timeOut) {
-        ObjectAndExpireTime objectAndExpireTime = map.get(key);
+    public <T> T loadCache(String sign, long timeOut) {
+        ObjectAndExpireTime objectAndExpireTime = map.get(sign);
         if (objectAndExpireTime == null || objectAndExpireTime.expireTime < System.currentTimeMillis()) {
             return null;
         }
