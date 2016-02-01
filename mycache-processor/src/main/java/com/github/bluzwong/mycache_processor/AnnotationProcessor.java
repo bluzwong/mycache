@@ -20,7 +20,7 @@ import java.util.Set;
 /**
  * Created by wangzhijie@wind-mobi.com on 2015/9/24.
  */
-@SupportedAnnotationTypes({"com.github.bluzwong.mycache_lib.CacheInMemory"})
+@SupportedAnnotationTypes({"com.github.bluzwong.mycache_lib.functioncache.RxCache"})
 @SupportedSourceVersion(SourceVersion.RELEASE_7)
 public class AnnotationProcessor extends AbstractProcessor{
 
@@ -114,7 +114,7 @@ public class AnnotationProcessor extends AbstractProcessor{
                     //boolean thisIsCallBack = false;
                     for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
                         log("params annot -> " + mirror); //mirror -> @com.github.bluzwong.mycache_lib.Ignore
-                        if (mirror.getAnnotationType().toString().endsWith("com.github.bluzwong.mycache_lib.Ignore")) {
+                        if (mirror.getAnnotationType().toString().endsWith("com.github.bluzwong.mycache_lib.functioncache..Ignore")) {
                             ignored = true;
                         }
 

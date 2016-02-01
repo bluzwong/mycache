@@ -2,6 +2,7 @@ package com.github.bluzwong.mycache_lib.functioncache;
 
 import android.content.Context;
 import com.github.bluzwong.mycache_lib.BuildConfig;
+import com.github.bluzwong.mycache_lib.MyCache;
 import com.github.bluzwong.mycache_lib.impl.SimpleRxCacheCore;
 import org.junit.After;
 import org.junit.Before;
@@ -34,13 +35,14 @@ public class RxCacheAdapterTest {
     @Before
     public void setUp() throws Exception {
         context = RuntimeEnvironment.application;
+        MyCache.init(context);
         adapter = RxCacheAdapter.INSTANCE;
-        //adapter.init(new EasyRxCacheCore());
-        cacheCore = SimpleRxCacheCore.create(context);
+        //adapter.setCacheCore(new EasyRxCacheCore());
+        cacheCore = SimpleRxCacheCore.create();
         cacheCore.getBook().destroy();
         cacheCore.getPreferences().edit().clear().commit();
         cacheCore.getMemoryCache().evictAll();
-        adapter.init(cacheCore);
+        adapter.setCacheCore(cacheCore);
         adapter.getLatches().clear();
     }
 

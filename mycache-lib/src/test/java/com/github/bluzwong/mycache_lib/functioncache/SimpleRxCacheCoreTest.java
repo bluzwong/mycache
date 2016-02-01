@@ -3,6 +3,7 @@ package com.github.bluzwong.mycache_lib.functioncache;
 import android.content.Context;
 import com.github.bluzwong.mycache_lib.BaseCacheCore;
 import com.github.bluzwong.mycache_lib.BuildConfig;
+import com.github.bluzwong.mycache_lib.MyCache;
 import com.github.bluzwong.mycache_lib.functioncache.data.Person;
 import com.github.bluzwong.mycache_lib.functioncache.data.TestDataGenerator;
 import com.github.bluzwong.mycache_lib.impl.SimpleRxCacheCore;
@@ -27,7 +28,8 @@ public class SimpleRxCacheCoreTest {
     @Before
     public void setUp() throws Exception {
         context = RuntimeEnvironment.application;
-        cacheCore = SimpleRxCacheCore.create(context);
+        MyCache.init(context);
+        cacheCore = SimpleRxCacheCore.create();
         cacheCore.getPreferences().edit().clear().commit();
         cacheCore.getMemoryCache().evictAll();
         cacheCore.getBook().destroy();

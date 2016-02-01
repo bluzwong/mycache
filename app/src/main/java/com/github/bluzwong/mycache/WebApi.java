@@ -1,8 +1,6 @@
 package com.github.bluzwong.mycache;
 
 import android.content.Context;
-import com.github.bluzwong.mycache_lib.DefaultDiskCacheInterceptor;
-import com.github.bluzwong.mycache_lib.UrlTimeOutMap;
 import com.github.bluzwong.mycache_lib.calladapter.RetrofitCache;
 import com.github.bluzwong.mycache_lib.impl.SimpleRetroCacheCore;
 import com.github.bluzwong.mycache_lib.calladapter.RetrofitCacheRxCallAdapterFactory;
@@ -39,13 +37,13 @@ public class WebApi {
     private Retrofit retrofit;
     public MyService myService;
 
-    public synchronized void init(Context context) {
+    public synchronized void init() {
         if (retrofit == null) {
             retrofit = new Retrofit.Builder()
                     .baseUrl("http://mt58866.xicp.net:66/")
                     .client(new OkHttpClient())
                     .addConverterFactory(GsonConverterFactory.create())
-                    .addCallAdapterFactory(RetrofitCacheRxCallAdapterFactory.create(SimpleRetroCacheCore.create(context)))
+                    .addCallAdapterFactory(RetrofitCacheRxCallAdapterFactory.create(SimpleRetroCacheCore.create()))
                     .build();
         }
         if (myService == null) {

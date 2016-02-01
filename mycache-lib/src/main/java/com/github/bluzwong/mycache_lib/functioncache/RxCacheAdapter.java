@@ -2,6 +2,7 @@ package com.github.bluzwong.mycache_lib.functioncache;
 
 import static com.github.bluzwong.mycache_lib.CacheUtils.*;
 
+import com.github.bluzwong.mycache_lib.impl.SimpleRxCacheCore;
 import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Action1;
@@ -21,9 +22,9 @@ public enum RxCacheAdapter {
     INSTANCE;
 
     private Map<String, CountDownLatch> latches = new HashMap<>();
-    private RxCacheCore cacheCore;
+    private RxCacheCore cacheCore = SimpleRxCacheCore.create();
 
-    public void init(RxCacheCore cacheCore) {
+    public void setCacheCore(RxCacheCore cacheCore) {
         if (cacheCore == null) {
             throw new IllegalArgumentException("RxCacheCore can not be null");
         }
@@ -42,7 +43,7 @@ public enum RxCacheAdapter {
 
     public <T> Observable<T> cachedObservable(final Observable<T> originOb, final String key, final long timeout) {
         if (cacheCore == null) {
-            throw new IllegalArgumentException("init(RxCacheCore cacheCore) must be called!");
+            throw new IllegalArgumentException("setCacheCore(RxCacheCore cacheCore) must be called!");
         }
         Observable<T> loadFromCache = loadFromCache(key, timeout);
         Observable<T> cachedLatchOriginOb = Observable.defer(new Func0<Observable<CountDownLatch>>() {

@@ -38,7 +38,7 @@ public class ClassInjector {
     }
     public String brewJava() throws Exception {
         StringBuilder builder = new StringBuilder("package " + this.classPackage + ";\n");
-        builder.append("import com.github.bluzwong.mycache_lib.*;\n");
+        // builder.append("import com.github.bluzwong.mycache_lib.*;\n");
         builder.append("public class ").append(this.className).append(" {\n");
         for (MethodInjector method : methods) {
             builder.append(method.brewJava(classPackage + "." + originClassName));

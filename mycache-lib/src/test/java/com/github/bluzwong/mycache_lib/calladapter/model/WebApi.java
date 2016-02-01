@@ -37,13 +37,13 @@ public class WebApi {
     public Retrofit retrofit;
     public MyService myService;
 
-    public synchronized void init(Context context) {
+    public synchronized void init() {
         if (retrofit == null) {
             retrofit = new Retrofit.Builder()
                     .baseUrl("http://mt58866.xicp.net:66/")
                     .client(new OkHttpClient())
                     .addConverterFactory(GsonConverterFactory.create())
-                    .addCallAdapterFactory(RetrofitCacheRxCallAdapterFactory.create(SimpleRetroCacheCore.create(context)))
+                    .addCallAdapterFactory(RetrofitCacheRxCallAdapterFactory.create(SimpleRetroCacheCore.create()))
                     .build();
         }
         if (myService == null) {

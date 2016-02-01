@@ -1,6 +1,7 @@
 package com.github.bluzwong.mycache_lib.calladapter;
 
 import android.content.Context;
+import com.github.bluzwong.mycache_lib.MyCache;
 import com.github.bluzwong.mycache_lib.calladapter.model.*;
 import com.github.bluzwong.mycache_lib.BuildConfig;
 import com.github.bluzwong.mycache_lib.calladapter.model.Result;
@@ -42,11 +43,12 @@ public class SimpleCacheCallAdapterTest {
     @Before
     public void setUp() throws Exception {
         context = RuntimeEnvironment.application;
+        MyCache.init(context);
         WebApi api = new WebApi();
-        api.init(context);
+        api.init();
         retrofit = api.retrofit;
         service = api.myService;
-        cacheCore = SimpleRetroCacheCore.create(context);
+        cacheCore = SimpleRetroCacheCore.create();
         factory = RetrofitCacheRxCallAdapterFactory.create(cacheCore);
         annotations = getClass().getDeclaredMethod("testForAnnotation").getAnnotations();
     }

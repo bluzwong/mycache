@@ -10,10 +10,8 @@ import java.util.Map;
 public class MethodInjector {
     private String funcName = "", returnType = "", params = "", signature = "", typeParams = "",
 
-            memTimeout = "";
+    memTimeout = "";
 
-    private String originCallBack = "";
-    private String callBackCls = "", callBackFunc = "", callBackParam = "";
 
 
     private boolean isStatic;
@@ -22,7 +20,7 @@ public class MethodInjector {
         this.funcName = funcName;
         this.returnType = returnType;
         this.params = params;
-        this.signature = funcName + "." + signature.replace(" ", "..").replace(",", "...");
+        this.signature = funcName + "-" + signature.replace(" ", "_").replace(",", "-");
         this.typeParams = typeParams;
         this.memTimeout = memTimeout;
         this.isStatic = isStatic;
@@ -36,90 +34,36 @@ public class MethodInjector {
         if (!isStatic) {
             builder.append("final ").append(originClass).append(" target");
         }
-        if (!typeParams.equals("")) {
+        if (!typeParams.equals("") && !isStatic) {
             builder.append(", ");
         }
         builder.append(typeParams).append(") {\n");
-        boolean isSync = false;
-        boolean isAsync = false;
         if (returnType.startsWith("rx.Observable<")) {
-            builder.append("return CacheHelper.getCachedMethod(");
-        } else if (!returnType.equals("void")) {
-            isSync = true;
-            builder.append("return (").append(returnType).append(")CacheHelper.getCachedMethodSync(");
-        } else {
-            // no known return type found
-            isAsync = true;
-            builder.append("final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);\n" +
-                    "        final Object[] resultObj = new Object[1];\n" +
-                    "        final ");
-            builder.append(callBackCls).append(" myCallBack = new ").append(callBackCls)
-                    .append("() {\n" +
-                            "            @Override\n" +
-                            "            public void ").append(callBackFunc)
-                    .append("(").append(callBackParam).append(" result) {\n" +
-                    "                resultObj[0] = result;\n" +
-                    "                latch.countDown();\n" +
-                    "            }\n" +
-                    "        };");
-            builder.append("new Thread(new Runnable() {\n" +
-                    "            @Override\n" +
-                    "            public void run() {\n" +
-                    "                final Object objAfterCache = CacheHelper.getCachedMethodSync(new CacheHelper.Fun1() {\n" +
-                    "                    @Override\n" +
-                    "                    public Object func() {");
+            builder.append("return com.github.bluzwong.mycache_lib.functioncache.RxCacheAdapter.INSTANCE.cachedObservable(");
         }
         StringBuilder firstParam = new StringBuilder();
 
-        if (isSync) {
-            firstParam.append("new CacheHelper.Fun1() {\n" +
-                    "    @Override\n" +
-                    "    public Object func() {\n" +
-                    "        return ");
-        }
 
         if (isStatic) {
             firstParam.append(originClass);
         } else {
             firstParam.append("target");
         }
-        if (isAsync) {
-            firstParam.append(".").append(funcName).append("(").append(params.replace("${myCallBack}", "myCallBack ")).append(");");
-        } else {
-            firstParam.append(".").append(funcName).append("(").append(params).append(")");
-        }
-        if (isSync) {
-            firstParam.append(";\n    }}");
-        }
-        if (isAsync) {
-            builder.append(firstParam.toString())
-                    .append("try {\n" +
-                            "                            latch.await();\n" +
-                            "                        } catch (InterruptedException e) {\n" +
-                            "                            e.printStackTrace();\n" +
-                            "                        }\n" +
-                            "                        return resultObj[0];\n" +
-                            "                    }\n" +
-                            "                }, ");
-            builder.append("\"").append(originClass).append(".").append(signature).append("\", ")
-                    .append(memTimeout)
-                    .append(");");
-            builder.append("new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {\n" +
-                    "                    @Override\n" +
-                    "                    public void run() {\n" +
-                    "                        " + originCallBack + "." + callBackFunc + "((" + callBackParam + ") objAfterCache);\n" +
-                    "                    }\n" +
-                    "                });\n" +
-                    "            }\n" +
-                    "        }).start();");
 
-        } else {
-            builder.append(firstParam.toString())
-                    .append(", \"").append(originClass).append(".").append(signature).append("\", ")
-                    .append(memTimeout)
-                    .append(");");
+        firstParam.append(".").append(funcName).append("(").append(params).append(")");
 
+
+        builder.append(firstParam.toString())
+                .append(", \"")
+                ;
+        if (isStatic) {
+            builder.append("static_");
         }
+        builder.append(originClass).append(".").append(signature).append("\", ")
+                .append(memTimeout)
+                .append(");");
+
+
         builder.append("\n}\n");
 
         return builder.toString();

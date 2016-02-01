@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.LruCache;
 import com.github.bluzwong.mycache_lib.BaseCacheCore;
+import com.github.bluzwong.mycache_lib.MyCache;
 import com.github.bluzwong.mycache_lib.functioncache.RxCacheCore;
 import io.paperdb.Book;
 import io.paperdb.Paper;
@@ -26,13 +27,17 @@ public class SimpleRxCacheCore extends BaseCacheCore implements RxCacheCore {
         this(new LruCache<String, TimeAndObject>(memorySize), context.getSharedPreferences(CACHE_NAME, Context.MODE_PRIVATE), Paper.book(CACHE_NAME));
     }
 
-    public static SimpleRxCacheCore create(Context context, int memorySize) {
+    public static SimpleRxCacheCore create(int memorySize) {
+        Context context = MyCache.sContext;
+        if (context == null) {
+            throw new IllegalArgumentException("need call MyCache.setCacheCore(context);");
+        }
         Paper.init(context.getApplicationContext());
         return new SimpleRxCacheCore(context, memorySize);
     }
 
-    public static SimpleRxCacheCore create(Context context) {
-        return create(context, DEFAULT_MEMORY_CACHE_SIZE);
+    public static SimpleRxCacheCore create() {
+        return create(DEFAULT_MEMORY_CACHE_SIZE);
     }
 
     @Override

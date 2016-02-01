@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.LruCache;
 import com.github.bluzwong.mycache_lib.CacheUtils;
+import com.github.bluzwong.mycache_lib.MyCache;
 import com.github.bluzwong.mycache_lib.calladapter.RetrofitCacheCore;
 import com.jakewharton.disklrucache.DiskLruCache;
 
@@ -25,6 +26,9 @@ public class SimpleRetroCacheCore implements RetrofitCacheCore {
     private SharedPreferences preferences;
 
     public SimpleRetroCacheCore(Context context, File diskDirectory, int memorySize, long maxDiskSize) {
+        if (context == null) {
+            throw new IllegalArgumentException("need call MyCache.setCacheCore(context);");
+        }
         try {
             diskCache = DiskLruCache.open(diskDirectory, 1, 1, maxDiskSize);
             preferences = context.getSharedPreferences(CACHE_NAME, Context.MODE_PRIVATE);
@@ -34,12 +38,16 @@ public class SimpleRetroCacheCore implements RetrofitCacheCore {
         memoryCache = new LruCache<>(memorySize);
     }
 
-    public static SimpleRetroCacheCore create(Context context, int memoryCacheSize, int diskCacheSize ) {
+    public static SimpleRetroCacheCore create(int memoryCacheSize, int diskCacheSize ) {
+        Context context = MyCache.sContext.getApplicationContext();
+        if (context == null) {
+            throw new IllegalArgumentException("need call MyCache.setCacheCore(context);");
+        }
         return new SimpleRetroCacheCore(context, new File(context.getCacheDir(), CACHE_NAME), memoryCacheSize, diskCacheSize);
     }
 
-    public static SimpleRetroCacheCore create(Context context) {
-        return create(context, DEFAULT_MEMORY_CACHE_SIZE, DEFAULT_DISK_CACHE_SIZE);
+    public static SimpleRetroCacheCore create() {
+        return create(DEFAULT_MEMORY_CACHE_SIZE, DEFAULT_DISK_CACHE_SIZE);
     }
 
     public SimpleRetroCacheCore setWillSave(WillSave willSave) {

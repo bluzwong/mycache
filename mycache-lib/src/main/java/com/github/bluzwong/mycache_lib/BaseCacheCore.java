@@ -143,6 +143,7 @@ public class BaseCacheCore {
         if (timeAndObject != null && timeAndObject.object != null) {
             if (timeAndObject.expireTime >= now && timeAndObject.expireTime <= now + timeOut) {
                 // object exists and not timeout
+                CacheUtils.cacheLog("hit in memory cache => " + key);
                 return timeAndObject.object;
             } else {
                 // objects exists but is timeout
@@ -172,6 +173,8 @@ public class BaseCacheCore {
         // in disk cache
         // and save in memory cache
         memoryCache.put(key, new TimeAndObject(expireTime, objectFromDisk));
+
+        CacheUtils.cacheLog("hit in disk cache => " + key);
         return objectFromDisk;
     }
 
