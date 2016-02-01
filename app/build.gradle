@@ -29,7 +29,7 @@ repositories {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
-    testCompile 'org.robolectric:robolectric:3.0-rc3'
+    testCompile ('org.robolectric:robolectric:3.0-rc3') {exclude module: 'asm'}
     compile 'com.android.support:appcompat-v7:23.1.0'
     compile 'com.android.support:design:23.1.0'
     compile 'io.reactivex:rxjava:1.0.14'

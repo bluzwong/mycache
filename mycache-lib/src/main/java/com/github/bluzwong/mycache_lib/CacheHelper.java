@@ -39,17 +39,17 @@ public class CacheHelper {
         }).first();
     }
 
-    static void cacheLog(String msg) {
+    public static void cacheLog(String msg) {
         cacheLog(msg, -1);
     }
 
-    static void logWarn(String msg) {
+    public static void logWarn(String msg) {
         if (CacheUtil.isNeedLog()) {
             Log.w("mycache", msg);
         }
     }
 
-    static void cacheLog(String msg, long startTime) {
+    public static void cacheLog(String msg, long startTime) {
         if (CacheUtil.isNeedLog()) {
             if (startTime > 0) {
                 long t = System.currentTimeMillis() - startTime;
