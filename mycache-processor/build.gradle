@@ -6,7 +6,7 @@ plugins {
 }
 apply plugin: 'java'
 
-version="0.1.0"  // The version
+version="0.2.0"  // The version
 group = 'com.github.bluzwong'
 task sourceJar(type: Jar) {
     from sourceSets.main.allSource
