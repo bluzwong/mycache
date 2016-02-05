@@ -2,6 +2,8 @@ package com.github.bluzwong.mycache_processor;
 
 
 
+import com.google.auto.service.AutoService;
+
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
@@ -14,16 +16,16 @@ import javax.tools.JavaFileObject;
 import java.io.Writer;
 import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
 /**
  * Created by wangzhijie@wind-mobi.com on 2015/9/24.
  */
-@SupportedAnnotationTypes({"com.github.bluzwong.mycache_lib.functioncache.RxCache"})
-@SupportedSourceVersion(SourceVersion.RELEASE_7)
+@AutoService(Processor.class)
 public class AnnotationProcessor extends AbstractProcessor{
-
+    private static boolean needLog = true;
 
     private Filer filer;
     private Elements elementUtils;
@@ -37,6 +39,19 @@ public class AnnotationProcessor extends AbstractProcessor{
         elementUtils = env.getElementUtils();
         typeUtils = env.getTypeUtils();
     }
+
+
+    @Override
+    public Set<String> getSupportedAnnotationTypes() {
+        Set<String> types = new LinkedHashSet<>();
+        types.add("com.github.bluzwong.mycache_lib.functioncache.RxCache");
+        return types;
+    }
+
+    @Override public SourceVersion getSupportedSourceVersion() {
+        return SourceVersion.latestSupported();
+    }
+
     /**
      * {@inheritDoc}
      *
@@ -71,11 +86,14 @@ public class AnnotationProcessor extends AbstractProcessor{
 
         for (TypeElement te : annotations) {
             // te = zhujie
-            String annoName = te.getSimpleName().toString();
+            String annoName = te.getQualifiedName().toString();
+            log("process at => " + annoName);
             /*for (AnnotationMirror mirror : te.getAnnotationMirrors()) {
                 log("anno mirror -> " + mirror); // @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
             }*/
-
+            if (!getSupportedAnnotationTypes().contains(annoName)) {
+                continue;
+            }
 
             for (Element e : roundEnv.getElementsAnnotatedWith(te)) {
                 //log("work on -> " + e.toString());
@@ -201,6 +219,9 @@ public class AnnotationProcessor extends AbstractProcessor{
         return elementUtils.getPackageOf(type).getQualifiedName().toString();
     }
     private void log(String msg) {
+        if (!needLog) {
+            return;
+        }
         processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, msg);
     }
 }

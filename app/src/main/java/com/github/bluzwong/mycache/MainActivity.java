@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private static int plus5(int value) {
+    static int plus5(int value) {
         try {
             Thread.sleep(200);
         } catch (InterruptedException e) {

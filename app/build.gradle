@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
-apply plugin: 'com.neenbedankt.android-apt' //apt
+apply plugin: 'kotlin-android'
+//apply plugin: 'com.neenbedankt.android-apt' //apt
 android {
     compileSdkVersion 23
     buildToolsVersion "23.0.1"
@@ -17,14 +18,19 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    packagingOptions {
-        exclude 'META-INF/services/javax.annotation.processing.Processor'
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
     }
 }
 repositories {
+    jcenter {
+        url 'http://jcenter.bintray.com'
+    }
     maven {
         url = 'https://dl.bintray.com/bluzwong/maven'
     }
+    mavenCentral()
 }
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
@@ -42,8 +48,25 @@ dependencies {
 //    compile 'com.squareup.retrofit2:adapter-rxjava:2.0.0-beta3'
 
 
-    apt project (':mycache-processor')
+    kapt project (':mycache-processor')
     compile project (':mycache-lib')
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 //    apt 'com.github.bluzwong:mycache-processor:0.2.0'
 //    compile ('com.github.bluzwong:mycache-lib:0.2.0@aar') { transitive = true }
+}
+buildscript {
+    ext.kotlin_version = '1.0.0-rc-1036'
+    repositories {
+        jcenter {
+            url 'http://jcenter.bintray.com'
+        }
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+kapt {
+    generateStubs = true
 }
