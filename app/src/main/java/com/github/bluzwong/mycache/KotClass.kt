@@ -14,4 +14,10 @@ class KotClass {
             Observable.just(MainActivity.plus5(5))
         }
     }
+    @RxCache
+    fun kotRx2():Observable<Int> {
+        return Observable.defer {
+            Observable.just(MainActivity.plus5(5))
+        }
+    }
 }

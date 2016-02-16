@@ -102,7 +102,7 @@ public class AnnotationProcessor extends AbstractProcessor{
 
                 TypeElement className = (TypeElement) e.getEnclosingElement();
                 String funcName = fieldName.toString();
-                String timeOut = "0";
+                String timeOut = "9223372036854775807L";
                 for (AnnotationMirror mirror : e.getAnnotationMirrors()) {
                     //log("annotation mirror -> " + mirror); // annotation mirror -> @com.github.bluzwong.mycache_lib.Cache(time=true)
                     //log("anno type -> " + mirror.getAnnotationType());

@@ -48,10 +48,10 @@ dependencies {
 //    compile 'com.squareup.retrofit2:adapter-rxjava:2.0.0-beta3'
 
 
-//    kapt project (':mycache-processor')
-//    compile project (':mycache-lib')
-    kapt 'com.github.bluzwong:mycache-processor:0.2.1'
-    compile ('com.github.bluzwong:mycache-lib:0.2.1@aar') { transitive = true }
+    kapt project (':mycache-processor')
+    compile project (':mycache-lib')
+//    kapt 'com.github.bluzwong:mycache-processor:0.2.1'
+//    compile ('com.github.bluzwong:mycache-lib:0.2.1@aar') { transitive = true }
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }

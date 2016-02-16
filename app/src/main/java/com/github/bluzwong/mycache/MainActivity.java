@@ -81,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
         return value + 5;
     }
 
-    @RxCache(timeOut = 5000)
+    @RxCache()
     public Observable<Integer> requestRxjava(final int value) {
         return Observable.defer(new Func0<Observable<Integer>>() {
             @Override
