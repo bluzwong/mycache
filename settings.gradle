@@ -1,1 +1,1 @@
-include  ':mycache-processor'// ':mycache-lib',':app' ,':mycache-processor'
+include  ':mycache-lib',':app' ,':mycache-processor'
