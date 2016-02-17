@@ -1,5 +1,7 @@
 apply plugin: 'com.android.library'
+apply plugin: 'com.github.dcendents.android-maven'
 
+group='com.github.bluzwong'
 android {
     compileSdkVersion 21
     buildToolsVersion "23.0.1"
