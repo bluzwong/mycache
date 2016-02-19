@@ -1,7 +1,8 @@
-package com.github.bluzwong.mycache_lib;
+package com.github.bluzwong.mycache_lib.impl;
 
 import android.content.SharedPreferences;
 import android.util.LruCache;
+import com.github.bluzwong.mycache_lib.CacheUtils;
 import com.github.bluzwong.mycache_lib.calladapter.RetrofitCacheCore;
 import io.paperdb.Book;
 

@@ -3,7 +3,6 @@ package com.github.bluzwong.mycache_lib.impl;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.LruCache;
-import com.github.bluzwong.mycache_lib.BaseCacheCore;
 import com.github.bluzwong.mycache_lib.MyCache;
 import com.github.bluzwong.mycache_lib.functioncache.RxCacheCore;
 import io.paperdb.Book;

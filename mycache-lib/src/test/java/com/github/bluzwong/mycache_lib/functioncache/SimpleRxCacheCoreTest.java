@@ -1,7 +1,7 @@
 package com.github.bluzwong.mycache_lib.functioncache;
 
 import android.content.Context;
-import com.github.bluzwong.mycache_lib.BaseCacheCore;
+import com.github.bluzwong.mycache_lib.impl.BaseCacheCore;
 import com.github.bluzwong.mycache_lib.BuildConfig;
 import com.github.bluzwong.mycache_lib.MyCache;
 import com.github.bluzwong.mycache_lib.functioncache.data.Person;

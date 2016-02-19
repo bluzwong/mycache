@@ -31,12 +31,10 @@ public enum RxCacheAdapter {
         this.cacheCore = cacheCore;
     }
 
-    // todo for test
     RxCacheCore getCacheCore() {
         return cacheCore;
     }
 
-    // todo for test
     Map<String, CountDownLatch> getLatches() {
         return latches;
     }
