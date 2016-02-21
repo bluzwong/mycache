@@ -45,6 +45,7 @@ dependencies {
     compile 'com.android.support:design:23.1.0'
     compile 'io.reactivex:rxjava:1.0.14'
     compile 'io.reactivex:rxandroid:1.0.1'
+
 //    compile ('com.github.bluzwong:mycache-lib:0.0.1@aar') { transitive = true }
 //    apt 'com.github.bluzwong:mycache-processor:0.0.1'
 
@@ -53,10 +54,12 @@ dependencies {
 //    compile 'com.squareup.retrofit2:adapter-rxjava:2.0.0-beta3'
 
 
-    kapt project (':mycache-processor')
-    compile project (':mycache-lib')
-//    kapt 'com.github.bluzwong:mycache-processor:0.2.1'
-//    compile ('com.github.bluzwong:mycache-lib:0.2.1@aar') { transitive = true }
+//    kapt project (':mycache-processor')
+//    compile project (':mycache-lib')
+    kapt 'com.github.bluzwong.mycache:mycache-processor:0.3.1'
+    compile ('com.github.bluzwong.mycache:mycache-lib:0.3.1@aar') { transitive = true }
+
+//    compile 'com.github.bluzwong:mycache:-SNAPSHOT'
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }
