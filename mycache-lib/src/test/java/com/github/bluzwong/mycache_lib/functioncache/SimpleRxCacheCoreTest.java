@@ -30,7 +30,7 @@ public class SimpleRxCacheCoreTest {
         context = RuntimeEnvironment.application;
         MyCache.init(context);
         cacheCore = SimpleRxCacheCore.create();
-        cacheCore.getPreferences().edit().clear().commit();
+        //cacheCore.getPreferences().edit().clear().commit();
         cacheCore.getMemoryCache().evictAll();
         cacheCore.getBook().destroy();
         cacheCore.setWillLoad(new BaseCacheCore.WillLoad() {
@@ -56,7 +56,7 @@ public class SimpleRxCacheCoreTest {
     @Test
     public void testCreate() throws Exception {
         assertNotNull(cacheCore);
-        assertNotNull(cacheCore.getPreferences());
+        //assertNotNull(cacheCore.getPreferences());
         assertNotNull(cacheCore.getMemoryCache());
     }
 
@@ -69,26 +69,28 @@ public class SimpleRxCacheCoreTest {
         assertNotNull(timeAndObject);
         assertNotNull(timeAndObject.object);
         assertEquals("ccf-obj", timeAndObject.object);
-        assertTrue(timeAndObject.expireTime > startTime);
-        assertTrue(timeAndObject.expireTime < startTime + 600);
+        //assertEquals(timeAndObject.savedTime, startTime);
+        assertTrue(timeAndObject.savedTime >= startTime);
+        assertTrue(timeAndObject.savedTime < startTime + 5);
 
-        long ccf = cacheCore.getPreferences().getLong(ccfKey, -1);
+        /*long ccf = cacheCore.getPreferences().getLong(ccfKey, -1);
         assertNotEquals(ccf, -1);
         assertTrue(ccf > startTime);
         assertTrue(ccf < startTime + 600);
-
+*/
         assertTrue(cacheCore.getBook().exist(ccfKey));
 
         Object readFromBook = cacheCore.getBook().read(ccfKey);
         assertNotNull(readFromBook);
-        assertEquals("ccf-obj", readFromBook);
+        BaseCacheCore.TimeAndObject timeAndObject2 = (BaseCacheCore.TimeAndObject) readFromBook;
+        assertEquals("ccf-obj", timeAndObject2.object);
 
-        cacheCore.saveCache("ccf-no save", "ccf-obj-nosave", 1000);
+        /*cacheCore.saveCache("ccf-no save", "ccf-obj-nosave", 1000);
         String keyNoSave = "ccf-no save";
         long nosaveTimeOut = cacheCore.getPreferences().getLong(keyNoSave, -1);
         assertEquals(nosaveTimeOut, -1);
 
-        assertFalse(cacheCore.getBook().exist(keyNoSave));
+        assertFalse(cacheCore.getBook().exist(keyNoSave));*/
     }
 
     @Test
@@ -119,8 +121,8 @@ public class SimpleRxCacheCoreTest {
         assertEquals(ccf1.object, "wsd2");
         boolean ccfExists = cacheCore.getBook().exist("ccf");
         assertTrue(ccfExists);
-        Object ccf = cacheCore.getBook().read("ccf");
-        assertEquals(ccf, "wsd2");
+        BaseCacheCore.TimeAndObject ccf = (cacheCore.getBook().read("ccf"));
+        assertEquals(ccf.object, "wsd2");
     }
 
     @Test

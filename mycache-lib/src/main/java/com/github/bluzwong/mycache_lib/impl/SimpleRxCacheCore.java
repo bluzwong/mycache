@@ -17,13 +17,13 @@ public class SimpleRxCacheCore extends BaseCacheCore implements RxCacheCore {
     private static final int DEFAULT_MEMORY_CACHE_SIZE = 100; // 100ge
     private static final String CACHE_NAME = "rx_cache_core";
 
-    private SimpleRxCacheCore(LruCache<String, TimeAndObject> memoryCache, SharedPreferences preferences, Book book) {
-        super(memoryCache, preferences, book);
+    private SimpleRxCacheCore(LruCache<String, TimeAndObject> memoryCache, Book book) {
+        super(memoryCache, book);
 
     }
 
-    private SimpleRxCacheCore(Context context, int memorySize) {
-        this(new LruCache<String, TimeAndObject>(memorySize), context.getSharedPreferences(CACHE_NAME, Context.MODE_PRIVATE), Paper.book(CACHE_NAME));
+    private SimpleRxCacheCore(int memorySize) {
+        this(new LruCache<String, TimeAndObject>(memorySize), Paper.book(CACHE_NAME));
     }
 
     public static SimpleRxCacheCore create(int memorySize) {
@@ -32,7 +32,7 @@ public class SimpleRxCacheCore extends BaseCacheCore implements RxCacheCore {
             throw new IllegalArgumentException("need call MyCache.setCacheCore(context);");
         }
         Paper.init(context.getApplicationContext());
-        return new SimpleRxCacheCore(context, memorySize);
+        return new SimpleRxCacheCore(memorySize);
     }
 
     public static SimpleRxCacheCore create() {

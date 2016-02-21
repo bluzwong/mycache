@@ -40,7 +40,7 @@ public class RxCacheAdapterTest {
         //adapter.setCacheCore(new EasyRxCacheCore());
         cacheCore = SimpleRxCacheCore.create();
         cacheCore.getBook().destroy();
-        cacheCore.getPreferences().edit().clear().commit();
+        //cacheCore.getPreferences().edit().clear().commit();
         cacheCore.getMemoryCache().evictAll();
         adapter.setCacheCore(cacheCore);
         adapter.getLatches().clear();

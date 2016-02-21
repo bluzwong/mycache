@@ -1,6 +1,5 @@
 package com.github.bluzwong.mycache_lib.impl;
 
-import android.content.SharedPreferences;
 import android.util.LruCache;
 import com.github.bluzwong.mycache_lib.CacheUtils;
 import com.github.bluzwong.mycache_lib.calladapter.RetrofitCacheCore;
@@ -12,11 +11,17 @@ import io.paperdb.Book;
  */
 public class BaseCacheCore {
     public static class TimeAndObject {
-        public long expireTime;
+        public long savedTime;
         public Object object;
 
-        public TimeAndObject(long expireTime, Object object) {
-            this.expireTime = expireTime;
+        public TimeAndObject() {
+            /* add for kryo save */
+        }
+
+        public TimeAndObject(long savedTime, Object object) {
+            /* add for proguard*/
+            //this();
+            this.savedTime = savedTime;
             this.object = object;
         }
     }
@@ -32,12 +37,12 @@ public class BaseCacheCore {
     private WillSave willSave;
     private WillLoad willLoad;
     private LruCache<String, TimeAndObject> memoryCache;
-    private SharedPreferences preferences;
+//    private SharedPreferences preferences;
     private Book book;
 
-    public SharedPreferences getPreferences() {
-        return preferences;
-    }
+//    public SharedPreferences getPreferences() {
+//        return preferences;
+//    }
 
     public LruCache<String, TimeAndObject> getMemoryCache() {
         return memoryCache;
@@ -47,12 +52,12 @@ public class BaseCacheCore {
         return book;
     }
 
-    public BaseCacheCore(LruCache<String, TimeAndObject> memoryCache, SharedPreferences preferences, Book book) {
-        if (memoryCache == null || preferences == null || book == null) {
+    public BaseCacheCore(LruCache<String, TimeAndObject> memoryCache, Book book) {
+        if (memoryCache == null || book == null) {
             throw new IllegalArgumentException("can not be null");
         }
         this.memoryCache = memoryCache;
-        this.preferences = preferences;
+//        this.preferences = preferences;
         this.book = book;
     }
 
@@ -68,12 +73,12 @@ public class BaseCacheCore {
 
     private void removeByKey(String key) {
         memoryCache.remove(key);
-        if (preferences != null) {
-            SharedPreferences.Editor editor = preferences.edit();
-            if (editor != null) {
-                editor.remove(key).apply();
-            }
-        }
+//        if (preferences != null) {
+//            SharedPreferences.Editor editor = preferences.edit();
+//            if (editor != null) {
+//                editor.remove(key).apply();
+//            }
+//        }
         if (book != null) {
             if (book.exist(key)) {
                 book.delete(key);
@@ -85,12 +90,12 @@ public class BaseCacheCore {
     }
 
     public void clearDiskCache() {
-        if (preferences != null) {
-            SharedPreferences.Editor editor = preferences.edit();
-            if (editor != null) {
-                editor.clear();
-            }
-        }
+//        if (preferences != null) {
+//            SharedPreferences.Editor editor = preferences.edit();
+//            if (editor != null) {
+//                editor.clear();
+//            }
+//        }
         if (book != null) {
             book.destroy();
         }
@@ -103,61 +108,96 @@ public class BaseCacheCore {
 
     protected void baseSaveCache(String key, Object object, long timeOut) {
         if (willSave != null && !willSave.shouldSave(key, object, timeOut)) {
+            CacheUtils.cacheLog("will not save: " + key);
             return;
         }
         if (object == null) {
+            CacheUtils.cacheLog("saving object is null! : "  + key);
             return;
         }
         if (timeOut == RetrofitCacheCore.NO_CACHE || timeOut <= 0) {
+            CacheUtils.cacheLog("time out <= 0, no need to save : " + key);
             return;
         }
 
         long now = System.currentTimeMillis();
-        long expireTime = now + timeOut;
+        //long savedTime = now + timeOut;
 
-        if (timeOut == Long.MAX_VALUE || timeOut == RetrofitCacheCore.ALWAYS_CACHE) {
-            expireTime = Long.MAX_VALUE;
-        }
+//        if (timeOut == Long.MAX_VALUE || timeOut == RetrofitCacheCore.ALWAYS_CACHE) {
+//            savedTime = Long.MAX_VALUE;
+//        }
 
-        memoryCache.put(key, new TimeAndObject(expireTime, object));
-        if (preferences == null || book == null) {
+        TimeAndObject timeAndObject = new TimeAndObject(now, object);
+        memoryCache.put(key, timeAndObject);
+        CacheUtils.cacheLog("cache to memory done => " + key);
+        if (book == null) {
+            CacheUtils.cacheLog("disk is not inited");
             return;
         }
-        SharedPreferences.Editor editor = preferences.edit();
-        if (editor == null) {
-            return;
-        }
-        editor.putLong(key, expireTime).apply();
+
         if (book.exist(key)) {
             book.delete(key);
         }
-        book.write(key, object);
+        book.write(key, timeAndObject);
+        CacheUtils.cacheLog("cache to disk done => " + key);
     }
 
     protected Object baseLoadCache(String key, long timeOut) {
         if (willLoad != null && !willLoad.shouldLoad(key)) {
+            CacheUtils.cacheLog("will not load: " + key);
             return null;
         }
         long now = System.currentTimeMillis();
 
         TimeAndObject timeAndObject = memoryCache.get(key);
         if (timeAndObject != null && timeAndObject.object != null) {
-            if (timeAndObject.expireTime >= now && timeAndObject.expireTime <= now + timeOut) {
+            if (timeAndObject.savedTime > 0 && timeAndObject.savedTime < now && now <= timeAndObject.savedTime + timeOut) {
                 // object exists and not timeout
                 CacheUtils.cacheLog("hit in memory cache => " + key);
                 return timeAndObject.object;
             } else {
                 // objects exists but is timeout
+                CacheUtils.cacheLog("objects exists is memory but is timeout => " + key);
                 removeByKey(key);
                 return null;
             }
+        } else {
+            CacheUtils.cacheLog("not in memory cache : " + key);
         }
         // not in memory cache, check disk cache
-        if (preferences == null || book == null) {
+        if (book == null) {
+            CacheUtils.cacheLog("disk is not inited : " + key);
             // not in disk cache
             return null;
         }
 
+        Object objectFromDisk = book.read(key);
+        if (objectFromDisk == null) {
+            // not in disk cache
+            CacheUtils.cacheLog("not in disk cache : " + key);
+            return null;
+        }
+
+        if (!(objectFromDisk instanceof TimeAndObject)) {
+            book.delete(key);
+            CacheUtils.cacheLog("saved object error, remove it: " + key);
+            return null;
+        }
+        timeAndObject = (TimeAndObject) objectFromDisk;
+        if (timeAndObject.object != null) {
+            if (timeAndObject.savedTime > 0 && timeAndObject.savedTime < now && now <= timeAndObject.savedTime + timeOut) {
+                // object exists and not timeout
+                CacheUtils.cacheLog("hit in disk cache and save it to memory=> " + key);
+                memoryCache.put(key, new TimeAndObject(timeAndObject.savedTime, timeAndObject.object));
+                return timeAndObject.object;
+            } else {
+                // objects exists but is timeout
+                CacheUtils.cacheLog("objects exists is disk but is timeout => " + key);
+                removeByKey(key);
+                return null;
+            }
+        }
+        return null;/*
         long expireTime = preferences.getLong(key, RetrofitCacheCore.NO_CACHE);
         if (expireTime == RetrofitCacheCore.NO_CACHE || expireTime <= 0 || expireTime < now || expireTime > now + timeOut) {
             // time out or no need to cache
@@ -176,7 +216,7 @@ public class BaseCacheCore {
         memoryCache.put(key, new TimeAndObject(expireTime, objectFromDisk));
 
         CacheUtils.cacheLog("hit in disk cache => " + key);
-        return objectFromDisk;
+        return objectFromDisk;*/
     }
 
 }

@@ -14,7 +14,8 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled false
+            signingConfig signingConfigs.debug
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
@@ -22,8 +23,12 @@ android {
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
+    lintOptions{
+        abortOnError false
+    }
 }
 repositories {
+    maven { url "https://www.jitpack.io" }
     jcenter {
         url 'http://jcenter.bintray.com'
     }

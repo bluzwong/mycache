@@ -74,14 +74,14 @@ public class MainActivity extends AppCompatActivity {
 
     static int plus5(int value) {
         try {
-            Thread.sleep(200);
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         return value + 5;
     }
 
-    @RxCache()
+    @RxCache(timeOut = 5000)
     public Observable<Integer> requestRxjava(final int value) {
         return Observable.defer(new Func0<Observable<Integer>>() {
             @Override
