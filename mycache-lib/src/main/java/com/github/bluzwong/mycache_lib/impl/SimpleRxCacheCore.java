@@ -1,12 +1,16 @@
 package com.github.bluzwong.mycache_lib.impl;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.util.LruCache;
 import com.github.bluzwong.mycache_lib.MyCache;
 import com.github.bluzwong.mycache_lib.functioncache.RxCacheCore;
+import com.orhanobut.hawk.Hawk;
+import com.orhanobut.hawk.HawkBuilder;
+import com.orhanobut.hawk.LogLevel;
+/*
 import io.paperdb.Book;
 import io.paperdb.Paper;
+*/
 
 /**
  * Created by bluzwong on 2016/2/1.
@@ -17,13 +21,13 @@ public class SimpleRxCacheCore extends BaseCacheCore implements RxCacheCore {
     private static final int DEFAULT_MEMORY_CACHE_SIZE = 100; // 100ge
     private static final String CACHE_NAME = "rx_cache_core";
 
-    private SimpleRxCacheCore(LruCache<String, TimeAndObject> memoryCache, Book book) {
-        super(memoryCache, book);
+    private SimpleRxCacheCore(LruCache<String, TimeAndObject> memoryCache/*, Book book*/) {
+        super(memoryCache/*, book*/);
 
     }
 
     private SimpleRxCacheCore(int memorySize) {
-        this(new LruCache<String, TimeAndObject>(memorySize), Paper.book(CACHE_NAME));
+        this(new LruCache<String, TimeAndObject>(memorySize)/*, Paper.book(CACHE_NAME)*/);
     }
 
     public static SimpleRxCacheCore create(int memorySize) {
@@ -31,7 +35,16 @@ public class SimpleRxCacheCore extends BaseCacheCore implements RxCacheCore {
         if (context == null) {
             throw new IllegalArgumentException("need call MyCache.setCacheCore(context);");
         }
-        Paper.init(context.getApplicationContext());
+        //Paper.init(context.getApplicationContext());
+        if (!Hawk.isBuilt()) {
+            Hawk.init(context)
+                    .setStorage(HawkBuilder.newSharedPrefStorage(context))
+                    .setEncryptionMethod(HawkBuilder.EncryptionMethod.NO_ENCRYPTION)
+                    .setLogLevel(MyCache.isNeedLog()? LogLevel.FULL:LogLevel.NONE)
+                    .build();
+        }
+
+
         return new SimpleRxCacheCore(memorySize);
     }
 

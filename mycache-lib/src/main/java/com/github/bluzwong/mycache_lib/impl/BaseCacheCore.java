@@ -3,7 +3,8 @@ package com.github.bluzwong.mycache_lib.impl;
 import android.util.LruCache;
 import com.github.bluzwong.mycache_lib.CacheUtils;
 import com.github.bluzwong.mycache_lib.calladapter.RetrofitCacheCore;
-import io.paperdb.Book;
+import com.orhanobut.hawk.Hawk;
+//import io.paperdb.Book;
 
 
 /**
@@ -20,7 +21,7 @@ public class BaseCacheCore {
 
         public TimeAndObject(long savedTime, Object object) {
             /* add for proguard*/
-            //this();
+            this();
             this.savedTime = savedTime;
             this.object = object;
         }
@@ -38,7 +39,7 @@ public class BaseCacheCore {
     private WillLoad willLoad;
     private LruCache<String, TimeAndObject> memoryCache;
 //    private SharedPreferences preferences;
-    private Book book;
+//    private Book book;
 
 //    public SharedPreferences getPreferences() {
 //        return preferences;
@@ -48,17 +49,17 @@ public class BaseCacheCore {
         return memoryCache;
     }
 
-    public Book getBook() {
-        return book;
-    }
+//    public Book getBook() {
+//        return book;
+//    }
 
-    public BaseCacheCore(LruCache<String, TimeAndObject> memoryCache, Book book) {
-        if (memoryCache == null || book == null) {
+    public BaseCacheCore(LruCache<String, TimeAndObject> memoryCache/*, Book book*/) {
+        if (memoryCache == null /*|| book == null*/) {
             throw new IllegalArgumentException("can not be null");
         }
         this.memoryCache = memoryCache;
 //        this.preferences = preferences;
-        this.book = book;
+//        this.book = book;
     }
 
     public void setWillSave(WillSave willSave) {
@@ -79,11 +80,14 @@ public class BaseCacheCore {
 //                editor.remove(key).apply();
 //            }
 //        }
-        if (book != null) {
+        if (Hawk.contains(key)) {
+            Hawk.remove(key);
+        }
+       /* if (book != null) {
             if (book.exist(key)) {
                 book.delete(key);
             }
-        }
+        }*/
     }
     public void clearMemoryCache() {
         memoryCache.evictAll();
@@ -96,9 +100,11 @@ public class BaseCacheCore {
 //                editor.clear();
 //            }
 //        }
-        if (book != null) {
+        /*if (book != null) {
             book.destroy();
-        }
+        }*/
+        // todo clear all
+        Hawk.clear();
     }
 
     public void clearAll() {
@@ -129,8 +135,10 @@ public class BaseCacheCore {
 
         TimeAndObject timeAndObject = new TimeAndObject(now, object);
         memoryCache.put(key, timeAndObject);
-        CacheUtils.cacheLog("cache to memory done => " + key);
-        if (book == null) {
+
+       CacheUtils.cacheLog("cache to memory done => " + key);
+        Hawk.put(key, timeAndObject);
+       /* if (book == null) {
             CacheUtils.cacheLog("disk is not inited");
             return;
         }
@@ -138,7 +146,7 @@ public class BaseCacheCore {
         if (book.exist(key)) {
             book.delete(key);
         }
-        book.write(key, timeAndObject);
+        book.write(key, timeAndObject);*/
         CacheUtils.cacheLog("cache to disk done => " + key);
     }
 
@@ -150,7 +158,7 @@ public class BaseCacheCore {
         long now = System.currentTimeMillis();
 
         TimeAndObject timeAndObject = memoryCache.get(key);
-        if (timeAndObject != null && timeAndObject.object != null) {
+        if (false && timeAndObject != null && timeAndObject.object != null) {
             if (timeAndObject.savedTime > 0 && timeAndObject.savedTime < now && now <= timeAndObject.savedTime + timeOut) {
                 // object exists and not timeout
                 CacheUtils.cacheLog("hit in memory cache => " + key);
@@ -165,13 +173,13 @@ public class BaseCacheCore {
             CacheUtils.cacheLog("not in memory cache : " + key);
         }
         // not in memory cache, check disk cache
-        if (book == null) {
+       /* if (book == null) {
             CacheUtils.cacheLog("disk is not inited : " + key);
             // not in disk cache
             return null;
-        }
+        }*/
 
-        Object objectFromDisk = book.read(key);
+        Object objectFromDisk = Hawk.get(key);// book.read(key);
         if (objectFromDisk == null) {
             // not in disk cache
             CacheUtils.cacheLog("not in disk cache : " + key);
@@ -179,7 +187,8 @@ public class BaseCacheCore {
         }
 
         if (!(objectFromDisk instanceof TimeAndObject)) {
-            book.delete(key);
+           // book.delete(key);
+            Hawk.remove(key);
             CacheUtils.cacheLog("saved object error, remove it: " + key);
             return null;
         }

@@ -7,6 +7,7 @@ import com.github.bluzwong.mycache_lib.MyCache;
 import com.github.bluzwong.mycache_lib.functioncache.data.Person;
 import com.github.bluzwong.mycache_lib.functioncache.data.TestDataGenerator;
 import com.github.bluzwong.mycache_lib.impl.SimpleRxCacheCore;
+import com.orhanobut.hawk.Hawk;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,7 +33,8 @@ public class SimpleRxCacheCoreTest {
         cacheCore = SimpleRxCacheCore.create();
         //cacheCore.getPreferences().edit().clear().commit();
         cacheCore.getMemoryCache().evictAll();
-        cacheCore.getBook().destroy();
+//        cacheCore.getBook().destroy();
+        Hawk.clear();
         cacheCore.setWillLoad(new BaseCacheCore.WillLoad() {
             @Override
             public boolean shouldLoad(String key) {
@@ -78,9 +80,9 @@ public class SimpleRxCacheCoreTest {
         assertTrue(ccf > startTime);
         assertTrue(ccf < startTime + 600);
 */
-        assertTrue(cacheCore.getBook().exist(ccfKey));
+        assertTrue(Hawk.contains(ccfKey));
 
-        Object readFromBook = cacheCore.getBook().read(ccfKey);
+        Object readFromBook = Hawk.get(ccfKey);
         assertNotNull(readFromBook);
         BaseCacheCore.TimeAndObject timeAndObject2 = (BaseCacheCore.TimeAndObject) readFromBook;
         assertEquals("ccf-obj", timeAndObject2.object);
@@ -96,6 +98,7 @@ public class SimpleRxCacheCoreTest {
     @Test
     public void testLoadCache() throws Exception {
         cacheCore.saveCache("ccf", "ccf-obj", 500);
+        //Thread.sleep(1);
         Object ccfFromLoadCache = cacheCore.loadCache("ccf", 500);
         assertNotNull(ccfFromLoadCache);
         assertEquals("ccf-obj", ccfFromLoadCache);
@@ -119,9 +122,9 @@ public class SimpleRxCacheCoreTest {
         assertEquals(size, 1);
         BaseCacheCore.TimeAndObject ccf1 = cacheCore.getMemoryCache().get("ccf");
         assertEquals(ccf1.object, "wsd2");
-        boolean ccfExists = cacheCore.getBook().exist("ccf");
+        boolean ccfExists = Hawk.contains("ccf");
         assertTrue(ccfExists);
-        BaseCacheCore.TimeAndObject ccf = (cacheCore.getBook().read("ccf"));
+        BaseCacheCore.TimeAndObject ccf = (Hawk.get("ccf"));
         assertEquals(ccf.object, "wsd2");
     }
 
@@ -135,8 +138,8 @@ public class SimpleRxCacheCoreTest {
 
         size = cacheCore.getMemoryCache().size();
         assertEquals(size, 0);
-        assertFalse(cacheCore.getBook().exist("ccf"));
-        assertFalse(cacheCore.getBook().exist("ccf2"));
+        assertFalse(Hawk.contains("ccf"));
+        assertFalse(Hawk.contains("ccf2"));
     }
 
     @Test
@@ -148,19 +151,19 @@ public class SimpleRxCacheCoreTest {
         cacheCore.clearMemoryCache();
         size = cacheCore.getMemoryCache().size();
         assertEquals(size, 0);
-        assertTrue(cacheCore.getBook().exist("ccf"));
-        assertTrue(cacheCore.getBook().exist("ccf2"));
+        assertTrue(Hawk.contains("ccf"));
+        assertTrue(Hawk.contains("ccf2"));
     }
 
     @Test
     public void testClearDisk() {
         cacheCore.saveCache("ccf", "wsd", 5000);
         cacheCore.saveCache("ccf2", "wsd2", 5000);
-        assertTrue(cacheCore.getBook().exist("ccf"));
-        assertTrue(cacheCore.getBook().exist("ccf2"));
+        assertTrue(Hawk.contains("ccf"));
+        assertTrue(Hawk.contains("ccf2"));
         cacheCore.clearDiskCache();
-        assertFalse(cacheCore.getBook().exist("ccf"));
-        assertFalse(cacheCore.getBook().exist("ccf2"));
+        assertFalse(Hawk.contains("ccf"));
+        assertFalse(Hawk.contains("ccf2"));
         int size = cacheCore.getMemoryCache().size();
         assertEquals(size, 2);
     }

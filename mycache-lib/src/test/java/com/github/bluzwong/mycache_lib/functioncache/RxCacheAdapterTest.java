@@ -4,6 +4,7 @@ import android.content.Context;
 import com.github.bluzwong.mycache_lib.BuildConfig;
 import com.github.bluzwong.mycache_lib.MyCache;
 import com.github.bluzwong.mycache_lib.impl.SimpleRxCacheCore;
+import com.orhanobut.hawk.Hawk;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,8 +40,9 @@ public class RxCacheAdapterTest {
         adapter = RxCacheAdapter.INSTANCE;
         //adapter.setCacheCore(new EasyRxCacheCore());
         cacheCore = SimpleRxCacheCore.create();
-        cacheCore.getBook().destroy();
+        //cacheCore.getBook().destroy();
         //cacheCore.getPreferences().edit().clear().commit();
+        Hawk.clear();
         cacheCore.getMemoryCache().evictAll();
         adapter.setCacheCore(cacheCore);
         adapter.getLatches().clear();

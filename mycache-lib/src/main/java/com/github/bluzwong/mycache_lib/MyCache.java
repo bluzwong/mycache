@@ -20,7 +20,7 @@ public class MyCache {
 
     public static void init(Context context) {
         if (sContext == null) {
-            sContext = context;
+            sContext = context.getApplicationContext();
         }
     }
 }

@@ -1,4 +1,4 @@
 include  ':app'
 
-//include ':mycache-lib'
-//include ':mycache-processor'
+include ':mycache-lib'
+include ':mycache-processor'
